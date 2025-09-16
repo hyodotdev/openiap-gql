@@ -390,7 +390,61 @@ const printDataClass = (objectType) => {
 };
 
 const printInput = (inputType) => {
+  if (inputType.name === 'RequestPurchaseProps') {
+    addDocComment(lines, inputType.description);
+    lines.push('public data class RequestPurchaseProps(');
+    lines.push('    val request: Request,');
+    lines.push('    val type: ProductQueryType');
+    lines.push(') {');
+    lines.push('    init {');
+    lines.push('        when (request) {');
+    lines.push('            is Request.Purchase -> require(type == ProductQueryType.InApp) { "type must be IN_APP when request is purchase" }');
+    lines.push('            is Request.Subscription -> require(type == ProductQueryType.Subs) { "type must be SUBS when request is subscription" }');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    companion object {');
+    lines.push('        fun fromJson(json: Map<String, Any?>): RequestPurchaseProps {');
+    lines.push('            val rawType = (json["type"] as String?)?.let { ProductQueryType.fromJson(it) }');
+    lines.push('            val purchaseJson = json["requestPurchase"] as Map<String, Any?>?');
+    lines.push('            if (purchaseJson != null) {');
+    lines.push('                val request = Request.Purchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson))');
+    lines.push('                val finalType = rawType ?: ProductQueryType.InApp');
+    lines.push('                require(finalType == ProductQueryType.InApp) { "type must be IN_APP when requestPurchase is provided" }');
+    lines.push('                return RequestPurchaseProps(request = request, type = finalType)');
+    lines.push('            }');
+    lines.push('            val subscriptionJson = json["requestSubscription"] as Map<String, Any?>?');
+    lines.push('            if (subscriptionJson != null) {');
+    lines.push('                val request = Request.Subscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson))');
+    lines.push('                val finalType = rawType ?: ProductQueryType.Subs');
+    lines.push('                require(finalType == ProductQueryType.Subs) { "type must be SUBS when requestSubscription is provided" }');
+    lines.push('                return RequestPurchaseProps(request = request, type = finalType)');
+    lines.push('            }');
+    lines.push('            throw IllegalArgumentException("RequestPurchaseProps requires requestPurchase or requestSubscription")');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    fun toJson(): Map<String, Any?> = when (request) {');
+    lines.push('        is Request.Purchase -> mapOf(');
+    lines.push('            "requestPurchase" to request.value.toJson(),');
+    lines.push('            "type" to type.toJson(),');
+    lines.push('        )');
+    lines.push('        is Request.Subscription -> mapOf(');
+    lines.push('            "requestSubscription" to request.value.toJson(),');
+    lines.push('            "type" to type.toJson(),');
+    lines.push('        )');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    sealed class Request {');
+    lines.push('        data class Purchase(val value: RequestPurchasePropsByPlatforms) : Request()');
+    lines.push('        data class Subscription(val value: RequestSubscriptionPropsByPlatforms) : Request()');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+    return;
+  }
   addDocComment(lines, inputType.description);
+  lines.push(`public data class ${inputType.name}(`);
   const fields = Object.values(inputType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
   const fieldInfos = fields.map((field) => {
     const { type, nullable, metadata } = getKotlinType(field.type);
@@ -399,7 +453,6 @@ const printInput = (inputType) => {
     const defaultValue = nullable ? ' = null' : '';
     return { field, propertyName, propertyType, defaultValue, metadata };
   });
-  lines.push(`public data class ${inputType.name}(`);
   fieldInfos.forEach(({ field, propertyName, propertyType, defaultValue }, index) => {
     addDocComment(lines, field.description, '    ');
     const suffix = index === fieldInfos.length - 1 ? '' : ',';
@@ -427,8 +480,26 @@ const printInput = (inputType) => {
 
 const printUnion = (unionType) => {
   addDocComment(lines, unionType.description);
-  const members = unionType.getTypes().map((member) => member.name).sort();
-  lines.push(`public sealed interface ${unionType.name} {`);
+  const memberTypes = unionType.getTypes();
+  const members = memberTypes.map((member) => member.name).sort();
+
+  let sharedInterfaceNames = [];
+  if (memberTypes.length > 0) {
+    const [firstMember, ...otherMembers] = memberTypes;
+    const firstInterfaces = new Set(firstMember.getInterfaces().map((iface) => iface.name));
+    for (const member of otherMembers) {
+      const memberInterfaces = new Set(member.getInterfaces().map((iface) => iface.name));
+      for (const ifaceName of Array.from(firstInterfaces)) {
+        if (!memberInterfaces.has(ifaceName)) {
+          firstInterfaces.delete(ifaceName);
+        }
+      }
+    }
+    sharedInterfaceNames = Array.from(firstInterfaces).sort();
+  }
+
+  const implementations = sharedInterfaceNames.length ? ` : ${sharedInterfaceNames.join(', ')}` : '';
+  lines.push(`public sealed interface ${unionType.name}${implementations} {`);
   lines.push('    fun toJson(): Map<String, Any?>', '');
   lines.push('    companion object {');
   lines.push(`        fun fromJson(json: Map<String, Any?>): ${unionType.name} {`);

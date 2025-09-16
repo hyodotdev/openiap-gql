@@ -390,6 +390,91 @@ const printObject = (objectType) => {
 };
 
 const printInput = (inputType) => {
+  if (inputType.name === 'RequestPurchaseProps') {
+    addDocComment(lines, inputType.description);
+    lines.push('class RequestPurchaseProps {');
+    lines.push('  RequestPurchaseProps({');
+    lines.push('    required this.request,');
+    lines.push('    ProductQueryType? type,');
+    lines.push('  }) : type = type ?? (request is RequestPurchasePropsRequestPurchase');
+    lines.push('          ? ProductQueryType.InApp');
+    lines.push('          : ProductQueryType.Subs) {');
+    lines.push('    if (request is RequestPurchasePropsRequestPurchase && this.type != ProductQueryType.InApp) {');
+    lines.push("      throw ArgumentError('type must be IN_APP when requestPurchase is provided');");
+    lines.push('    }');
+    lines.push('    if (request is RequestPurchasePropsRequestSubscription && this.type != ProductQueryType.Subs) {');
+    lines.push("      throw ArgumentError('type must be SUBS when requestSubscription is provided');");
+    lines.push('    }');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  final RequestPurchasePropsRequest request;');
+    lines.push('  final ProductQueryType type;');
+    lines.push('');
+    lines.push('  factory RequestPurchaseProps.fromJson(Map<String, dynamic> json) {');
+    lines.push("    final typeValue = json['type'] as String?;");
+    lines.push('    final parsedType = typeValue != null ? ProductQueryType.fromJson(typeValue) : null;');
+    lines.push("    final purchaseJson = json['requestPurchase'] as Map<String, dynamic>?;");
+    lines.push('    if (purchaseJson != null) {');
+    lines.push('      final request = RequestPurchasePropsRequestPurchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson));');
+    lines.push('      final finalType = parsedType ?? ProductQueryType.InApp;');
+    lines.push('      if (finalType != ProductQueryType.InApp) {');
+    lines.push("        throw ArgumentError('type must be IN_APP when requestPurchase is provided');");
+    lines.push('      }');
+    lines.push('      return RequestPurchaseProps(request: request, type: finalType);');
+    lines.push('    }');
+    lines.push("    final subscriptionJson = json['requestSubscription'] as Map<String, dynamic>?;");
+    lines.push('    if (subscriptionJson != null) {');
+    lines.push('      final request = RequestPurchasePropsRequestSubscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson));');
+    lines.push('      final finalType = parsedType ?? ProductQueryType.Subs;');
+    lines.push('      if (finalType != ProductQueryType.Subs) {');
+    lines.push("        throw ArgumentError('type must be SUBS when requestSubscription is provided');");
+    lines.push('      }');
+    lines.push('      return RequestPurchaseProps(request: request, type: finalType);');
+    lines.push('    }');
+    lines.push("    throw ArgumentError('RequestPurchaseProps requires requestPurchase or requestSubscription');");
+    lines.push('  }');
+    lines.push('');
+    lines.push('  Map<String, dynamic> toJson() {');
+    lines.push('    if (request is RequestPurchasePropsRequestPurchase) {');
+    lines.push('      return {');
+    lines.push("        'requestPurchase': (request as RequestPurchasePropsRequestPurchase).value.toJson(),");
+    lines.push("        'type': type.toJson(),");
+    lines.push('      };');
+    lines.push('    }');
+    lines.push('    if (request is RequestPurchasePropsRequestSubscription) {');
+    lines.push('      return {');
+    lines.push("        'requestSubscription': (request as RequestPurchasePropsRequestSubscription).value.toJson(),");
+    lines.push("        'type': type.toJson(),");
+    lines.push('      };');
+    lines.push('    }');
+    lines.push("    throw StateError('Unsupported RequestPurchaseProps request variant');");
+    lines.push('  }');
+    lines.push('');
+    lines.push('  static RequestPurchaseProps inApp({required RequestPurchasePropsByPlatforms request}) {');
+    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestPurchase(request), type: ProductQueryType.InApp);');
+    lines.push('  }');
+    lines.push('');
+    lines.push('  static RequestPurchaseProps subs({required RequestSubscriptionPropsByPlatforms request}) {');
+    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestSubscription(request), type: ProductQueryType.Subs);');
+    lines.push('  }');
+    lines.push('}');
+    lines.push('');
+    lines.push('sealed class RequestPurchasePropsRequest {');
+    lines.push('  const RequestPurchasePropsRequest();');
+    lines.push('}');
+    lines.push('');
+    lines.push('class RequestPurchasePropsRequestPurchase extends RequestPurchasePropsRequest {');
+    lines.push('  const RequestPurchasePropsRequestPurchase(this.value);');
+    lines.push('  final RequestPurchasePropsByPlatforms value;');
+    lines.push('}');
+    lines.push('');
+    lines.push('class RequestPurchasePropsRequestSubscription extends RequestPurchasePropsRequest {');
+    lines.push('  const RequestPurchasePropsRequestSubscription(this.value);');
+    lines.push('  final RequestSubscriptionPropsByPlatforms value;');
+    lines.push('}');
+    lines.push('');
+    return;
+  }
   addDocComment(lines, inputType.description);
   lines.push(`class ${inputType.name} {`);
   lines.push(`  const ${inputType.name}({`);
@@ -432,8 +517,27 @@ const printInput = (inputType) => {
 
 const printUnion = (unionType) => {
   addDocComment(lines, unionType.description);
-  const members = unionType.getTypes().map((member) => member.name).sort();
-  lines.push(`sealed class ${unionType.name} {`);
+  const memberTypes = unionType.getTypes();
+  const members = memberTypes.map((member) => member.name).sort();
+
+  let sharedInterfaceNames = [];
+  if (memberTypes.length > 0) {
+    const [firstMember, ...otherMembers] = memberTypes;
+    const firstInterfaces = new Set(firstMember.getInterfaces().map((iface) => iface.name));
+    for (const member of otherMembers) {
+      const memberInterfaces = new Set(member.getInterfaces().map((iface) => iface.name));
+      for (const ifaceName of Array.from(firstInterfaces)) {
+        if (!memberInterfaces.has(ifaceName)) {
+          firstInterfaces.delete(ifaceName);
+        }
+      }
+    }
+    sharedInterfaceNames = Array.from(firstInterfaces).sort();
+  }
+
+  const implementsClause = sharedInterfaceNames.length ? ` implements ${sharedInterfaceNames.join(', ')}` : '';
+
+  lines.push(`sealed class ${unionType.name}${implementsClause} {`);
   lines.push(`  const ${unionType.name}();`, '');
   lines.push(`  factory ${unionType.name}.fromJson(Map<String, dynamic> json) {`);
   lines.push(`    final typeName = json['__typename'] as String?;`);
@@ -444,6 +548,33 @@ const printUnion = (unionType) => {
   lines.push('    }');
   lines.push(`    throw ArgumentError('Unknown __typename for ${unionType.name}: $typeName');`);
   lines.push('  }', '');
+
+  if (sharedInterfaceNames.length) {
+    const interfaceFieldMap = new Map();
+    for (const interfaceName of sharedInterfaceNames) {
+      const interfaceType = schema.getType(interfaceName);
+      if (!interfaceType || !isInterfaceType(interfaceType)) continue;
+      const fields = Object.values(interfaceType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+      for (const field of fields) {
+        if (interfaceFieldMap.has(field.name)) continue;
+        const { type, nullable } = getDartType(field.type);
+        interfaceFieldMap.set(field.name, { field, type, nullable });
+      }
+    }
+
+    const interfaceFields = Array.from(interfaceFieldMap.values()).sort((a, b) => a.field.name.localeCompare(b.field.name));
+    interfaceFields.forEach(({ field, type, nullable }) => {
+      addDocComment(lines, field.description, '  ');
+      const fieldType = `${type}${nullable ? '?' : ''}`;
+      const fieldName = escapeDartName(field.name);
+      lines.push('  @override');
+      lines.push(`  ${fieldType} get ${fieldName};`);
+    });
+    if (interfaceFields.length) {
+      lines.push('');
+    }
+  }
+
   lines.push('  Map<String, dynamic> toJson();');
   lines.push('}', '');
 };

@@ -496,15 +496,6 @@ public struct PurchaseOptions: Codable {
     public var onlyIncludeActiveItemsIOS: Bool?
 }
 
-public struct PurchaseParams: Codable {
-    /// Per-platform purchase request props
-    public var requestPurchase: RequestPurchasePropsByPlatforms?
-    /// Per-platform subscription request props
-    public var requestSubscription: RequestSubscriptionPropsByPlatforms?
-    /// Explicit purchase type hint (defaults to in-app)
-    public var type: ProductQueryType?
-}
-
 public struct ReceiptValidationAndroidOptions: Codable {
     public var accessToken: String
     public var isSub: Bool?
@@ -544,10 +535,68 @@ public struct RequestPurchaseIosProps: Codable {
 }
 
 public struct RequestPurchaseProps: Codable {
-    /// Android-specific purchase parameters
-    public var android: RequestPurchaseAndroidProps?
-    /// iOS-specific purchase parameters
-    public var ios: RequestPurchaseIosProps?
+    public var request: Request
+    public var type: ProductQueryType
+
+    public init(request: Request, type: ProductQueryType? = nil) {
+        switch request {
+        case .purchase:
+            let resolved = type ?? .inApp
+            precondition(resolved == .inApp, "RequestPurchaseProps.type must be .inApp when request is purchase")
+            self.type = resolved
+        case .subscription:
+            let resolved = type ?? .subs
+            precondition(resolved == .subs, "RequestPurchaseProps.type must be .subs when request is subscription")
+            self.type = resolved
+        }
+        self.request = request
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case requestPurchase
+        case requestSubscription
+        case type
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedType = try container.decodeIfPresent(ProductQueryType.self, forKey: .type)
+        if let purchase = try container.decodeIfPresent(RequestPurchasePropsByPlatforms.self, forKey: .requestPurchase) {
+            let finalType = decodedType ?? .inApp
+            guard finalType == .inApp else {
+                throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "type must be IN_APP when requestPurchase is provided")
+            }
+            self.request = .purchase(purchase)
+            self.type = finalType
+            return
+        }
+        if let subscription = try container.decodeIfPresent(RequestSubscriptionPropsByPlatforms.self, forKey: .requestSubscription) {
+            let finalType = decodedType ?? .subs
+            guard finalType == .subs else {
+                throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "type must be SUBS when requestSubscription is provided")
+            }
+            self.request = .subscription(subscription)
+            self.type = finalType
+            return
+        }
+        throw DecodingError.dataCorruptedError(forKey: .requestPurchase, in: container, debugDescription: "RequestPurchaseProps requires requestPurchase or requestSubscription.")
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch request {
+        case let .purchase(value):
+            try container.encode(value, forKey: .requestPurchase)
+        case let .subscription(value):
+            try container.encode(value, forKey: .requestSubscription)
+        }
+        try container.encode(type, forKey: .type)
+    }
+
+    public enum Request {
+        case purchase(RequestPurchasePropsByPlatforms)
+        case subscription(RequestSubscriptionPropsByPlatforms)
+    }
 }
 
 public struct RequestPurchasePropsByPlatforms: Codable {
@@ -591,22 +640,284 @@ public struct RequestSubscriptionPropsByPlatforms: Codable {
 
 // MARK: - Unions
 
-public enum Product {
+public enum Product: Codable, ProductCommon {
     case productAndroid(ProductAndroid)
     case productIos(ProductIOS)
+
+    public var currency: String {
+        switch self {
+        case let .productAndroid(value):
+            return value.currency
+        case let .productIos(value):
+            return value.currency
+        }
+    }
+
+    public var debugDescription: String? {
+        switch self {
+        case let .productAndroid(value):
+            return value.debugDescription
+        case let .productIos(value):
+            return value.debugDescription
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case let .productAndroid(value):
+            return value.description
+        case let .productIos(value):
+            return value.description
+        }
+    }
+
+    public var displayName: String? {
+        switch self {
+        case let .productAndroid(value):
+            return value.displayName
+        case let .productIos(value):
+            return value.displayName
+        }
+    }
+
+    public var displayPrice: String {
+        switch self {
+        case let .productAndroid(value):
+            return value.displayPrice
+        case let .productIos(value):
+            return value.displayPrice
+        }
+    }
+
+    public var id: String {
+        switch self {
+        case let .productAndroid(value):
+            return value.id
+        case let .productIos(value):
+            return value.id
+        }
+    }
+
+    public var platform: IapPlatform {
+        switch self {
+        case let .productAndroid(value):
+            return value.platform
+        case let .productIos(value):
+            return value.platform
+        }
+    }
+
+    public var price: Double? {
+        switch self {
+        case let .productAndroid(value):
+            return value.price
+        case let .productIos(value):
+            return value.price
+        }
+    }
+
+    public var title: String {
+        switch self {
+        case let .productAndroid(value):
+            return value.title
+        case let .productIos(value):
+            return value.title
+        }
+    }
+
+    public var type: ProductType {
+        switch self {
+        case let .productAndroid(value):
+            return value.type
+        case let .productIos(value):
+            return value.type
+        }
+    }
 }
 
-public enum ProductSubscription {
+public enum ProductSubscription: Codable, ProductCommon {
     case productSubscriptionAndroid(ProductSubscriptionAndroid)
     case productSubscriptionIos(ProductSubscriptionIOS)
+
+    public var currency: String {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.currency
+        case let .productSubscriptionIos(value):
+            return value.currency
+        }
+    }
+
+    public var debugDescription: String? {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.debugDescription
+        case let .productSubscriptionIos(value):
+            return value.debugDescription
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.description
+        case let .productSubscriptionIos(value):
+            return value.description
+        }
+    }
+
+    public var displayName: String? {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.displayName
+        case let .productSubscriptionIos(value):
+            return value.displayName
+        }
+    }
+
+    public var displayPrice: String {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.displayPrice
+        case let .productSubscriptionIos(value):
+            return value.displayPrice
+        }
+    }
+
+    public var id: String {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.id
+        case let .productSubscriptionIos(value):
+            return value.id
+        }
+    }
+
+    public var platform: IapPlatform {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.platform
+        case let .productSubscriptionIos(value):
+            return value.platform
+        }
+    }
+
+    public var price: Double? {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.price
+        case let .productSubscriptionIos(value):
+            return value.price
+        }
+    }
+
+    public var title: String {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.title
+        case let .productSubscriptionIos(value):
+            return value.title
+        }
+    }
+
+    public var type: ProductType {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.type
+        case let .productSubscriptionIos(value):
+            return value.type
+        }
+    }
 }
 
-public enum Purchase {
+public enum Purchase: Codable, PurchaseCommon {
     case purchaseAndroid(PurchaseAndroid)
     case purchaseIos(PurchaseIOS)
+
+    public var id: String {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.id
+        case let .purchaseIos(value):
+            return value.id
+        }
+    }
+
+    public var ids: [String]? {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.ids
+        case let .purchaseIos(value):
+            return value.ids
+        }
+    }
+
+    public var isAutoRenewing: Bool {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.isAutoRenewing
+        case let .purchaseIos(value):
+            return value.isAutoRenewing
+        }
+    }
+
+    public var platform: IapPlatform {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.platform
+        case let .purchaseIos(value):
+            return value.platform
+        }
+    }
+
+    public var productId: String {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.productId
+        case let .purchaseIos(value):
+            return value.productId
+        }
+    }
+
+    public var purchaseState: PurchaseState {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.purchaseState
+        case let .purchaseIos(value):
+            return value.purchaseState
+        }
+    }
+
+    /// Unified purchase token (iOS JWS, Android purchaseToken)
+    public var purchaseToken: String? {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.purchaseToken
+        case let .purchaseIos(value):
+            return value.purchaseToken
+        }
+    }
+
+    public var quantity: Int {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.quantity
+        case let .purchaseIos(value):
+            return value.quantity
+        }
+    }
+
+    public var transactionDate: Double {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.transactionDate
+        case let .purchaseIos(value):
+            return value.transactionDate
+        }
+    }
 }
 
-public enum ReceiptValidationResult {
+public enum ReceiptValidationResult: Codable {
     case receiptValidationResultAndroid(ReceiptValidationResultAndroid)
     case receiptValidationResultIos(ReceiptValidationResultIOS)
 }
@@ -634,7 +945,7 @@ public protocol MutationResolver {
     /// Present the App Store code redemption sheet
     func presentCodeRedemptionSheetIOS() async throws -> VoidResult
     /// Initiate a purchase flow; rely on events for final state
-    func requestPurchase(params: PurchaseParams) async throws -> RequestPurchaseResult?
+    func requestPurchase(params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
     /// Purchase the promoted product surfaced by the App Store
     func requestPurchaseOnPromotedProductIOS() async throws -> PurchaseIOS
     /// Restore completed purchases across platforms

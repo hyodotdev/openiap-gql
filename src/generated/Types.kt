@@ -1559,37 +1559,6 @@ public data class PurchaseOptions(
     )
 }
 
-public data class PurchaseParams(
-    /**
-     * Per-platform purchase request props
-     */
-    val requestPurchase: RequestPurchasePropsByPlatforms? = null,
-    /**
-     * Per-platform subscription request props
-     */
-    val requestSubscription: RequestSubscriptionPropsByPlatforms? = null,
-    /**
-     * Explicit purchase type hint (defaults to in-app)
-     */
-    val type: ProductQueryType? = null
-) {
-    companion object {
-        fun fromJson(json: Map<String, Any?>): PurchaseParams {
-            return PurchaseParams(
-                requestPurchase = (json["requestPurchase"] as Map<String, Any?>?)?.let { RequestPurchasePropsByPlatforms.fromJson(it) },
-                requestSubscription = (json["requestSubscription"] as Map<String, Any?>?)?.let { RequestSubscriptionPropsByPlatforms.fromJson(it) },
-                type = (json["type"] as String?)?.let { ProductQueryType.fromJson(it) },
-            )
-        }
-    }
-
-    fun toJson(): Map<String, Any?> = mapOf(
-        "requestPurchase" to requestPurchase?.toJson(),
-        "requestSubscription" to requestSubscription?.toJson(),
-        "type" to type?.toJson(),
-    )
-}
-
 public data class ReceiptValidationAndroidOptions(
     val accessToken: String,
     val isSub: Boolean? = null,
@@ -1721,28 +1690,52 @@ public data class RequestPurchaseIosProps(
 }
 
 public data class RequestPurchaseProps(
-    /**
-     * Android-specific purchase parameters
-     */
-    val android: RequestPurchaseAndroidProps? = null,
-    /**
-     * iOS-specific purchase parameters
-     */
-    val ios: RequestPurchaseIosProps? = null
+    val request: Request,
+    val type: ProductQueryType
 ) {
-    companion object {
-        fun fromJson(json: Map<String, Any?>): RequestPurchaseProps {
-            return RequestPurchaseProps(
-                android = (json["android"] as Map<String, Any?>?)?.let { RequestPurchaseAndroidProps.fromJson(it) },
-                ios = (json["ios"] as Map<String, Any?>?)?.let { RequestPurchaseIosProps.fromJson(it) },
-            )
+    init {
+        when (request) {
+            is Request.Purchase -> require(type == ProductQueryType.InApp) { "type must be IN_APP when request is purchase" }
+            is Request.Subscription -> require(type == ProductQueryType.Subs) { "type must be SUBS when request is subscription" }
         }
     }
 
-    fun toJson(): Map<String, Any?> = mapOf(
-        "android" to android?.toJson(),
-        "ios" to ios?.toJson(),
-    )
+    companion object {
+        fun fromJson(json: Map<String, Any?>): RequestPurchaseProps {
+            val rawType = (json["type"] as String?)?.let { ProductQueryType.fromJson(it) }
+            val purchaseJson = json["requestPurchase"] as Map<String, Any?>?
+            if (purchaseJson != null) {
+                val request = Request.Purchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson))
+                val finalType = rawType ?: ProductQueryType.InApp
+                require(finalType == ProductQueryType.InApp) { "type must be IN_APP when requestPurchase is provided" }
+                return RequestPurchaseProps(request = request, type = finalType)
+            }
+            val subscriptionJson = json["requestSubscription"] as Map<String, Any?>?
+            if (subscriptionJson != null) {
+                val request = Request.Subscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson))
+                val finalType = rawType ?: ProductQueryType.Subs
+                require(finalType == ProductQueryType.Subs) { "type must be SUBS when requestSubscription is provided" }
+                return RequestPurchaseProps(request = request, type = finalType)
+            }
+            throw IllegalArgumentException("RequestPurchaseProps requires requestPurchase or requestSubscription")
+        }
+    }
+
+    fun toJson(): Map<String, Any?> = when (request) {
+        is Request.Purchase -> mapOf(
+            "requestPurchase" to request.value.toJson(),
+            "type" to type.toJson(),
+        )
+        is Request.Subscription -> mapOf(
+            "requestSubscription" to request.value.toJson(),
+            "type" to type.toJson(),
+        )
+    }
+
+    sealed class Request {
+        data class Purchase(val value: RequestPurchasePropsByPlatforms) : Request()
+        data class Subscription(val value: RequestSubscriptionPropsByPlatforms) : Request()
+    }
 }
 
 public data class RequestPurchasePropsByPlatforms(
@@ -1880,7 +1873,7 @@ public data class RequestSubscriptionPropsByPlatforms(
 
 // MARK: - Unions
 
-public sealed interface Product {
+public sealed interface Product : ProductCommon {
     fun toJson(): Map<String, Any?>
 
     companion object {
@@ -1894,7 +1887,7 @@ public sealed interface Product {
     }
 }
 
-public sealed interface ProductSubscription {
+public sealed interface ProductSubscription : ProductCommon {
     fun toJson(): Map<String, Any?>
 
     companion object {
@@ -1908,7 +1901,7 @@ public sealed interface ProductSubscription {
     }
 }
 
-public sealed interface Purchase {
+public sealed interface Purchase : PurchaseCommon {
     fun toJson(): Map<String, Any?>
 
     companion object {
@@ -1981,7 +1974,7 @@ public interface MutationResolver {
     /**
      * Initiate a purchase flow; rely on events for final state
      */
-    suspend fun requestPurchase(params: PurchaseParams): RequestPurchaseResult?
+    suspend fun requestPurchase(params: RequestPurchaseProps): RequestPurchaseResult?
     /**
      * Purchase the promoted product surfaced by the App Store
      */

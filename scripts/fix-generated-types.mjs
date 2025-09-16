@@ -168,6 +168,23 @@ content = content.replace(/export enum [^{]+\{[\s\S]*?\}/g, (block) =>
   block.replace(/= '([^']+)'/g, (_, value) => `= '${toConstantCase(value)}'`)
 );
 
+content = content.replace(
+  /export interface RequestPurchaseProps \{[\s\S]*?\}\n\n/,
+  [
+    'export type RequestPurchaseProps =',
+    '  | {',
+    '      /** Per-platform purchase request props */',
+    '      request: RequestPurchasePropsByPlatforms;',
+    "      type: 'in-app';",
+    '    }',
+    '  | {',
+    '      /** Per-platform subscription request props */',
+    '      request: RequestSubscriptionPropsByPlatforms;',
+    "      type: 'subs';",
+    '    };\n\n',
+  ].join('\n'),
+);
+
 const futureFields = new Set();
 for (const file of schemaFiles) {
   let previousWasMarker = false;
