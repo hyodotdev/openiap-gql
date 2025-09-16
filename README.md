@@ -1,5 +1,7 @@
 # openiap-gql Code Generation Guide
 
+[![Generate Types](https://github.com/hyodotdev/openiap-gql/actions/workflows/generate-types.yml/badge.svg)](https://github.com/hyodotdev/openiap-gql/actions/workflows/generate-types.yml)
+
 <!-- markdownlint-disable MD033 -->
 <p align="center">
   <img src="./logo.png" alt="OpenIAP GraphQL logo" width="320" />
