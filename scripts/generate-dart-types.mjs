@@ -72,9 +72,17 @@ const toCamelCase = (value, upper = false) => {
     .filter(Boolean)
     .map((token) => token.toLowerCase());
   if (tokens.length === 0) return value;
-  const [first, ...rest] = tokens;
-  const firstToken = upper ? first.charAt(0).toUpperCase() + first.slice(1) : first;
-  return [firstToken, ...rest.map((token) => token.charAt(0).toUpperCase() + token.slice(1))].join('');
+  const normalized = tokens.map((token) => (token === 'ios' ? 'IOS' : token));
+  const [first, ...rest] = normalized;
+  const formatFirst = () => {
+    if (first === 'IOS') {
+      return upper ? 'IOS' : 'ios';
+    }
+    return upper ? first.charAt(0).toUpperCase() + first.slice(1) : first;
+  };
+  const firstToken = formatFirst();
+  const restTokens = rest.map((token) => (token === 'IOS' ? 'IOS' : token.charAt(0).toUpperCase() + token.slice(1)));
+  return [firstToken, ...restTokens].join('');
 };
 
 const toPascalCase = (value) => toCamelCase(value, true);
@@ -92,20 +100,6 @@ const scalarMap = new Map([
   ['Int', 'int'],
   ['Float', 'double'],
 ]);
-
-const getDartType = (graphqlType) => {
-  if (graphqlType instanceof GraphQLNonNull) {
-    const inner = getDartType(graphqlType.ofType);
-    return { type: inner.type, nullable: false };
-  }
-  if (graphqlType instanceof GraphQLList) {
-    const inner = getDartType(graphqlType.ofType);
-    const element = inner.type + (inner.nullable ? '?' : '');
-    return { type: `List<${element}>`, nullable: true };
-  }
-  const mapped = scalarMap.get(graphqlType.name) ?? graphqlType.name;
-  return { type: mapped, nullable: true };
-};
 
 const addDocComment = (lines, description, indent = '') => {
   if (!description) return;
@@ -154,10 +148,127 @@ for (const name of typeNames) {
     objects.push(type);
     continue;
   }
-  if (isInputObjectType(type)) {
+if (isInputObjectType(type)) {
     inputs.push(type);
   }
 }
+
+const enumNames = new Set(enums.map((value) => value.name));
+const interfaceNames = new Set(interfaces.map((value) => value.name));
+const objectNames = new Set(objects.map((value) => value.name));
+const inputNames = new Set(inputs.map((value) => value.name));
+const unionNames = new Set(unions.map((value) => value.name));
+
+const getTypeMetadata = (graphqlType) => {
+  if (graphqlType instanceof GraphQLNonNull) {
+    const inner = getTypeMetadata(graphqlType.ofType);
+    return { ...inner, nullable: false };
+  }
+  if (graphqlType instanceof GraphQLList) {
+    const inner = getTypeMetadata(graphqlType.ofType);
+    const innerType = inner.dartType + (inner.nullable ? '?' : '');
+    return {
+      kind: 'list',
+      nullable: true,
+      elementType: inner,
+      dartType: `List<${innerType}>`,
+    };
+  }
+  const typeName = graphqlType.name;
+  let kind = 'object';
+  if (scalarMap.has(typeName)) {
+    kind = 'scalar';
+  } else if (enumNames.has(typeName)) {
+    kind = 'enum';
+  } else if (interfaceNames.has(typeName)) {
+    kind = 'interface';
+  } else if (inputNames.has(typeName)) {
+    kind = 'input';
+  } else if (unionNames.has(typeName)) {
+    kind = 'union';
+  } else if (objectNames.has(typeName)) {
+    kind = 'object';
+  }
+  const dartType = scalarMap.get(typeName) ?? typeName;
+  return {
+    kind,
+    name: typeName,
+    nullable: true,
+    dartType,
+  };
+};
+
+const getDartType = (graphqlType) => {
+  const metadata = getTypeMetadata(graphqlType);
+  return { type: metadata.dartType, nullable: metadata.nullable, metadata };
+};
+
+const buildFromJsonExpression = (metadata, sourceExpression) => {
+  if (metadata.kind === 'list') {
+    const listCast = `(${sourceExpression} as List<dynamic>${metadata.nullable ? '?' : ''})`;
+    const elementExpression = buildFromJsonExpression(metadata.elementType, 'e');
+    const mapCall = (target) => `${target}.map((e) => ${elementExpression}).toList()`;
+    if (metadata.nullable) {
+      return `${listCast} == null ? null : ${mapCall(`${listCast}!`)}`;
+    }
+    return mapCall(listCast);
+  }
+  if (metadata.kind === 'scalar') {
+    switch (metadata.name) {
+      case 'Float':
+        return metadata.nullable
+          ? `(${sourceExpression} as num?)?.toDouble()`
+          : `(${sourceExpression} as num).toDouble()`;
+      case 'Int':
+        return metadata.nullable
+          ? `${sourceExpression} as int?`
+          : `${sourceExpression} as int`;
+      case 'Boolean':
+        return metadata.nullable
+          ? `${sourceExpression} as bool?`
+          : `${sourceExpression} as bool`;
+      case 'ID':
+      case 'String':
+        return metadata.nullable
+          ? `${sourceExpression} as String?`
+          : `${sourceExpression} as String`;
+      default:
+        return metadata.nullable ? `${sourceExpression}` : `${sourceExpression}`;
+    }
+  }
+  if (metadata.kind === 'enum') {
+    return metadata.nullable
+      ? `${sourceExpression} != null ? ${metadata.name}.fromJson(${sourceExpression} as String) : null`
+      : `${metadata.name}.fromJson(${sourceExpression} as String)`;
+  }
+  if (['object', 'input', 'interface', 'union'].includes(metadata.kind)) {
+    return metadata.nullable
+      ? `${sourceExpression} != null ? ${metadata.dartType}.fromJson(${sourceExpression} as Map<String, dynamic>) : null`
+      : `${metadata.dartType}.fromJson(${sourceExpression} as Map<String, dynamic>)`;
+  }
+  return metadata.nullable ? `${sourceExpression}` : `${sourceExpression}`;
+};
+
+const buildToJsonExpression = (metadata, accessorExpression) => {
+  if (metadata.kind === 'list') {
+    const inner = buildToJsonExpression(metadata.elementType, 'e');
+    if (metadata.nullable) {
+      return `${accessorExpression} == null ? null : ${accessorExpression}!.map((e) => ${inner}).toList()`;
+    }
+    return `${accessorExpression}.map((e) => ${inner}).toList()`;
+  }
+  if (metadata.kind === 'enum') {
+    return metadata.nullable
+      ? `${accessorExpression}?.toJson()`
+      : `${accessorExpression}.toJson()`;
+  }
+  if (['object', 'input', 'interface', 'union'].includes(metadata.kind)) {
+    return metadata.nullable
+      ? `${accessorExpression}?.toJson()`
+      : `${accessorExpression}.toJson()`;
+  }
+  return accessorExpression;
+};
 
 const lines = [];
 lines.push(
@@ -178,12 +289,37 @@ const printEnum = (enumType) => {
   const values = enumType.getValues();
   values.forEach((value, index) => {
     addDocComment(lines, value.description, '  ');
-    const name = escapeDartName(toCamelCase(value.name));
+    const name = escapeDartName(toPascalCase(value.name));
     const rawValue = toConstantCase(value.name);
     const suffix = index === values.length - 1 ? ';' : ',';
     lines.push(`  ${name}('${rawValue}')${suffix}`);
   });
-  lines.push('', `  const ${enumType.name}(this.value);`, '  final String value;', '}', '');
+  lines.push(
+    '',
+    `  const ${enumType.name}(this.value);`,
+    '  final String value;',
+    '',
+    `  factory ${enumType.name}.fromJson(String value) {`,
+    '    switch (value) {'
+  );
+  values.forEach((value) => {
+    const name = escapeDartName(toPascalCase(value.name));
+    const rawValue = toConstantCase(value.name);
+    const schemaValue = value.name;
+    lines.push(`      case '${rawValue}':`, `        return ${enumType.name}.${name};`);
+    if (schemaValue !== rawValue) {
+      lines.push(`      case '${schemaValue}':`, `        return ${enumType.name}.${name};`);
+    }
+  });
+  lines.push(
+    '    }',
+    `    throw ArgumentError('Unknown ${enumType.name} value: $value');`,
+    '  }',
+    '',
+    '  String toJson() => value;',
+    '}',
+    ''
+  );
 };
 
 const printInterface = (interfaceType) => {
@@ -203,30 +339,53 @@ const printInterface = (interfaceType) => {
 const printObject = (objectType) => {
   addDocComment(lines, objectType.description);
   const interfacesForObject = objectType.getInterfaces().map((iface) => iface.name);
-  const unionInterfaces = unionMembership.has(objectType.name)
+  const unionsForObject = unionMembership.has(objectType.name)
     ? Array.from(unionMembership.get(objectType.name)).sort()
     : [];
-  const implementsList = [...interfacesForObject, ...unionInterfaces];
-  const implementsClause = implementsList.length ? ` implements ${implementsList.join(', ')}` : '';
-  lines.push(`class ${objectType.name}${implementsClause} {`);
+  const baseUnion = unionsForObject.shift() ?? null;
+  const extendsClause = baseUnion ? ` extends ${baseUnion}` : '';
+  const implementsTargets = [...interfacesForObject, ...unionsForObject];
+  const implementsClause = implementsTargets.length ? ` implements ${implementsTargets.join(', ')}` : '';
+  lines.push(`class ${objectType.name}${extendsClause}${implementsClause} {`);
   lines.push(`  const ${objectType.name}({`);
   const fields = Object.values(objectType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
-  fields.forEach((field, index) => {
-    addDocComment(lines, field.description, '    ');
-    const { type, nullable } = getDartType(field.type);
-    const fieldType = `${type}${nullable ? '?' : ''}`;
+  const fieldInfos = fields.map((field) => {
+    const { type, nullable, metadata } = getDartType(field.type);
     const fieldName = escapeDartName(field.name);
+    return { field, fieldName, type, nullable, metadata };
+  });
+  fieldInfos.forEach(({ field, nullable, fieldName }) => {
+    addDocComment(lines, field.description, '    ');
     const line = `    ${nullable ? '' : 'required '}this.${fieldName},`;
     lines.push(line);
   });
   lines.push('  });', '');
-  fields.forEach((field) => {
+  fieldInfos.forEach(({ field, type, nullable, fieldName }) => {
     addDocComment(lines, field.description, '  ');
-    const { type, nullable } = getDartType(field.type);
     const fieldType = `${type}${nullable ? '?' : ''}`;
-    const fieldName = escapeDartName(field.name);
     lines.push(`  final ${fieldType} ${fieldName};`);
   });
+  lines.push('');
+  lines.push(`  factory ${objectType.name}.fromJson(Map<String, dynamic> json) {`);
+  lines.push(`    return ${objectType.name}(`);
+  fieldInfos.forEach(({ field, fieldName, metadata }) => {
+    const jsonExpression = buildFromJsonExpression(metadata, `json['${field.name}']`);
+    lines.push(`      ${fieldName}: ${jsonExpression},`);
+  });
+  lines.push('    );');
+  lines.push('  }', '');
+  if (baseUnion) {
+    lines.push('  @override');
+  }
+  lines.push('  Map<String, dynamic> toJson() {');
+  lines.push('    return {');
+  lines.push(`      '__typename': '${objectType.name}',`);
+  fieldInfos.forEach(({ field, fieldName, metadata }) => {
+    const toJsonExpression = buildToJsonExpression(metadata, fieldName);
+    lines.push(`      '${field.name}': ${toJsonExpression},`);
+  });
+  lines.push('    };');
+  lines.push('  }');
   lines.push('}', '');
 };
 
@@ -235,29 +394,58 @@ const printInput = (inputType) => {
   lines.push(`class ${inputType.name} {`);
   lines.push(`  const ${inputType.name}({`);
   const fields = Object.values(inputType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
-  fields.forEach((field) => {
-    addDocComment(lines, field.description, '    ');
-    const { type, nullable } = getDartType(field.type);
-    const fieldType = `${type}${nullable ? '?' : ''}`;
+  const fieldInfos = fields.map((field) => {
+    const { type, nullable, metadata } = getDartType(field.type);
     const fieldName = escapeDartName(field.name);
+    return { field, fieldName, type, nullable, metadata };
+  });
+  fieldInfos.forEach(({ field, nullable, fieldName }) => {
+    addDocComment(lines, field.description, '    ');
     const line = `    ${nullable ? '' : 'required '}this.${fieldName},`;
     lines.push(line);
   });
   lines.push('  });', '');
-  fields.forEach((field) => {
+  fieldInfos.forEach(({ field, type, nullable, fieldName }) => {
     addDocComment(lines, field.description, '  ');
-    const { type, nullable } = getDartType(field.type);
     const fieldType = `${type}${nullable ? '?' : ''}`;
-    const fieldName = escapeDartName(field.name);
     lines.push(`  final ${fieldType} ${fieldName};`);
   });
+  lines.push('');
+  lines.push(`  factory ${inputType.name}.fromJson(Map<String, dynamic> json) {`);
+  lines.push(`    return ${inputType.name}(`);
+  fieldInfos.forEach(({ field, fieldName, metadata }) => {
+    const jsonExpression = buildFromJsonExpression(metadata, `json['${field.name}']`);
+    lines.push(`      ${fieldName}: ${jsonExpression},`);
+  });
+  lines.push('    );');
+  lines.push('  }', '');
+  lines.push('  Map<String, dynamic> toJson() {');
+  lines.push('    return {');
+  fieldInfos.forEach(({ field, fieldName, metadata }) => {
+    const toJsonExpression = buildToJsonExpression(metadata, fieldName);
+    lines.push(`      '${field.name}': ${toJsonExpression},`);
+  });
+  lines.push('    };');
+  lines.push('  }');
   lines.push('}', '');
 };
 
 const printUnion = (unionType) => {
   addDocComment(lines, unionType.description);
-  lines.push(`abstract class ${unionType.name} {}`);
-  lines.push('');
+  const members = unionType.getTypes().map((member) => member.name).sort();
+  lines.push(`sealed class ${unionType.name} {`);
+  lines.push(`  const ${unionType.name}();`, '');
+  lines.push(`  factory ${unionType.name}.fromJson(Map<String, dynamic> json) {`);
+  lines.push(`    final typeName = json['__typename'] as String?;`);
+  lines.push('    switch (typeName) {');
+  members.forEach((member) => {
+    lines.push(`      case '${member}':`, `        return ${member}.fromJson(json);`);
+  });
+  lines.push('    }');
+  lines.push(`    throw ArgumentError('Unknown __typename for ${unionType.name}: $typeName');`);
+  lines.push('  }', '');
+  lines.push('  Map<String, dynamic> toJson();');
+  lines.push('}', '');
 };
 
 const printOperationInterface = (operationType) => {
