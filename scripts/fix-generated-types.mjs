@@ -64,6 +64,27 @@ for (const [tsName, iosName] of iosTypeMap) {
   content = content.replace(pattern, iosName);
 }
 
+// Enforce IOS capitalization conventions for enum members and fields.
+content = content.replace(/\b([A-Za-z0-9]+)Ios\b/g, (_, prefix) => `${prefix}IOS`);
+content = content.replace(/\bIos\b/g, 'IOS');
+
+const toKebabCase = (value) => value
+  .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+  .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+  .replace(/[_\s]+/g, '-')
+  .replace(/-+/g, '-')
+  .toLowerCase();
+
+// Convert enums (except ErrorCode) to union literal types with lower-snake-case values.
+content = content.replace(/export enum (\w+) \{[\s\S]*?\}\n?/g, (match) => {
+  const enumName = match.match(/export enum (\w+)/)[1];
+  if (enumName === 'ErrorCode') return match;
+  const valueMatches = [...match.matchAll(/=\s*'([^']+)'/g)];
+  if (valueMatches.length === 0) return match;
+  const literals = valueMatches.map(([, raw]) => `'${toKebabCase(raw)}'`);
+  return `export type ${enumName} = ${literals.join(' | ')};\n`;
+});
+
 const removeDefinition = (keyword) => {
   const pattern = new RegExp(`^export type ${keyword}[^]*?;\n`, 'm');
   if (pattern.test(content)) {

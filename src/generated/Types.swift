@@ -50,16 +50,16 @@ public enum IapEvent: String, Codable, CaseIterable {
     case promotedProductIos = "PROMOTED_PRODUCT_IOS"
 }
 
+public enum IapPlatform: String, Codable, CaseIterable {
+    case ios = "IOS"
+    case android = "ANDROID"
+}
+
 public enum PaymentModeIOS: String, Codable, CaseIterable {
     case empty = "EMPTY"
     case freeTrial = "FREE_TRIAL"
     case payAsYouGo = "PAY_AS_YOU_GO"
     case payUpFront = "PAY_UP_FRONT"
-}
-
-public enum Platform: String, Codable, CaseIterable {
-    case ios = "IOS"
-    case android = "ANDROID"
 }
 
 public enum ProductQueryType: String, Codable, CaseIterable {
@@ -111,7 +111,7 @@ public protocol ProductCommon: Codable {
     var displayName: String? { get }
     var displayPrice: String { get }
     var id: String { get }
-    var platform: Platform { get }
+    var platform: IapPlatform { get }
     var price: Double? { get }
     var title: String { get }
     var type: ProductType { get }
@@ -121,7 +121,7 @@ public protocol PurchaseCommon: Codable {
     var id: String { get }
     var ids: [String]? { get }
     var isAutoRenewing: Bool { get }
-    var platform: Platform { get }
+    var platform: IapPlatform { get }
     var productId: String { get }
     var purchaseState: PurchaseState { get }
     /// Unified purchase token (iOS JWS, Android purchaseToken)
@@ -218,7 +218,7 @@ public struct ProductAndroid: Codable, ProductCommon {
     public var id: String
     public var nameAndroid: String
     public var oneTimePurchaseOfferDetailsAndroid: ProductAndroidOneTimePurchaseOfferDetail?
-    public var platform: Platform
+    public var platform: IapPlatform
     public var price: Double?
     public var subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails]?
     public var title: String
@@ -241,7 +241,7 @@ public struct ProductIOS: Codable, ProductCommon {
     public var id: String
     public var isFamilyShareableIOS: Bool
     public var jsonRepresentationIOS: String
-    public var platform: Platform
+    public var platform: IapPlatform
     public var price: Double?
     public var subscriptionInfoIOS: SubscriptionInfoIOS?
     public var title: String
@@ -258,7 +258,7 @@ public struct ProductSubscriptionAndroid: Codable, ProductCommon {
     public var id: String
     public var nameAndroid: String
     public var oneTimePurchaseOfferDetailsAndroid: ProductAndroidOneTimePurchaseOfferDetail?
-    public var platform: Platform
+    public var platform: IapPlatform
     public var price: Double?
     public var subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails]
     public var title: String
@@ -289,7 +289,7 @@ public struct ProductSubscriptionIOS: Codable, ProductCommon {
     public var introductoryPriceSubscriptionPeriodIOS: SubscriptionPeriodIOS?
     public var isFamilyShareableIOS: Bool
     public var jsonRepresentationIOS: String
-    public var platform: Platform
+    public var platform: IapPlatform
     public var price: Double?
     public var subscriptionInfoIOS: SubscriptionInfoIOS?
     public var subscriptionPeriodNumberIOS: String?
@@ -310,7 +310,7 @@ public struct PurchaseAndroid: Codable, PurchaseCommon {
     public var obfuscatedAccountIdAndroid: String?
     public var obfuscatedProfileIdAndroid: String?
     public var packageNameAndroid: String?
-    public var platform: Platform
+    public var platform: IapPlatform
     public var productId: String
     public var purchaseState: PurchaseState
     public var purchaseToken: String?
@@ -341,7 +341,7 @@ public struct PurchaseIOS: Codable, PurchaseCommon {
     public var originalTransactionDateIOS: Double?
     public var originalTransactionIdentifierIOS: String?
     public var ownershipTypeIOS: String?
-    public var platform: Platform
+    public var platform: IapPlatform
     public var productId: String
     public var purchaseState: PurchaseState
     public var purchaseToken: String?
@@ -370,7 +370,7 @@ public struct ReceiptValidationResultAndroid: Codable {
     public var cancelDate: Double?
     public var cancelReason: String?
     public var deferredDate: Double?
-    public var deferredSku: Double?
+    public var deferredSku: String?
     public var freeTrialEndDate: Double
     public var gracePeriodEndDate: Double
     public var parentProductId: String
@@ -481,7 +481,7 @@ public struct PurchaseInput: Codable {
     public var id: String
     public var ids: [String]?
     public var isAutoRenewing: Bool
-    public var platform: Platform
+    public var platform: IapPlatform
     public var productId: String
     public var purchaseState: PurchaseState
     public var purchaseToken: String?
@@ -586,7 +586,7 @@ public struct RequestSubscriptionPropsByPlatforms: Codable {
     /// Android-specific subscription parameters
     public var android: RequestSubscriptionAndroidProps?
     /// iOS-specific subscription parameters
-    public var ios: RequestPurchaseIosProps?
+    public var ios: RequestSubscriptionIosProps?
 }
 
 // MARK: - Unions

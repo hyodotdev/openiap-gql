@@ -1,8 +1,8 @@
 # openiap.dev GraphQL Types for cross-platform IAP (common)
 
 # Platform discriminators
-enum Platform {
-  Ios
+enum IapPlatform {
+  IOS
   Android
 }
 
@@ -26,7 +26,7 @@ enum PurchaseState {
 enum IapEvent {
   PurchaseUpdated
   PurchaseError
-  PromotedProductIos
+  PromotedProductIOS
 }
 
 # Common product fields
@@ -40,7 +40,7 @@ interface ProductCommon {
   currency: String!
   price: Float
   debugDescription: String
-  platform: Platform!
+  platform: IapPlatform!
 }
 
 # Common purchase fields
@@ -53,7 +53,7 @@ interface PurchaseCommon {
   Unified purchase token (iOS JWS, Android purchaseToken)
   """
   purchaseToken: String
-  platform: Platform!
+  platform: IapPlatform!
   quantity: Int!
   purchaseState: PurchaseState!
   isAutoRenewing: Boolean!
@@ -128,7 +128,7 @@ input PurchaseInput {
   ids: [String!]
   transactionDate: Float!
   purchaseToken: String
-  platform: Platform!
+  platform: IapPlatform!
   quantity: Int!
   purchaseState: PurchaseState!
   isAutoRenewing: Boolean!
@@ -173,7 +173,7 @@ input RequestSubscriptionPropsByPlatforms {
   """
   iOS-specific subscription parameters
   """
-  ios: RequestPurchaseIosProps
+  ios: RequestSubscriptionIosProps
   """
   Android-specific subscription parameters
   """

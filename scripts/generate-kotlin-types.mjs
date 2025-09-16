@@ -102,19 +102,11 @@ const scalarMap = new Map([
   ['Float', 'Double'],
 ]);
 
-const getKotlinType = (graphqlType) => {
-  if (graphqlType instanceof GraphQLNonNull) {
-    const inner = getKotlinType(graphqlType.ofType);
-    return { type: inner.type, nullable: false };
-  }
-  if (graphqlType instanceof GraphQLList) {
-    const inner = getKotlinType(graphqlType.ofType);
-    const innerType = inner.type + (inner.nullable ? '?' : '');
-    return { type: `List<${innerType}>`, nullable: true };
-  }
-  const mapped = scalarMap.get(graphqlType.name) ?? graphqlType.name;
-  return { type: mapped, nullable: true };
-};
+const enumNames = new Set();
+const interfaceNames = new Set();
+const objectNames = new Set();
+const inputNames = new Set();
+const unionNames = new Set();
 
 const addDocComment = (lines, description, indent = '') => {
   if (!description) return;
@@ -170,6 +162,131 @@ for (const name of typeNames) {
   }
 }
 
+for (const enumType of enums) {
+  enumNames.add(enumType.name);
+}
+for (const interfaceType of interfaces) {
+  interfaceNames.add(interfaceType.name);
+}
+for (const objectType of objects) {
+  objectNames.add(objectType.name);
+}
+for (const inputType of inputs) {
+  inputNames.add(inputType.name);
+}
+for (const unionType of unions) {
+  unionNames.add(unionType.name);
+}
+
+const getTypeMetadata = (graphqlType) => {
+  if (graphqlType instanceof GraphQLNonNull) {
+    const inner = getTypeMetadata(graphqlType.ofType);
+    return { ...inner, nullable: false };
+  }
+  if (graphqlType instanceof GraphQLList) {
+    const inner = getTypeMetadata(graphqlType.ofType);
+    const elementType = { ...inner };
+    const elementKotlin = inner.kotlinType + (inner.nullable ? '?' : '');
+    return {
+      kind: 'list',
+      nullable: true,
+      elementType,
+      kotlinType: `List<${elementKotlin}>`,
+    };
+  }
+  const typeName = graphqlType.name;
+  let kind = 'object';
+  if (scalarMap.has(typeName)) {
+    kind = 'scalar';
+  } else if (enumNames.has(typeName)) {
+    kind = 'enum';
+  } else if (interfaceNames.has(typeName)) {
+    kind = 'interface';
+  } else if (inputNames.has(typeName)) {
+    kind = 'input';
+  } else if (unionNames.has(typeName)) {
+    kind = 'union';
+  } else if (objectNames.has(typeName)) {
+    kind = 'object';
+  }
+  const kotlinType = scalarMap.get(typeName) ?? typeName;
+  return {
+    kind,
+    name: typeName,
+    nullable: true,
+    kotlinType,
+  };
+};
+
+const getKotlinType = (graphqlType) => {
+  const metadata = getTypeMetadata(graphqlType);
+  return { type: metadata.kotlinType, nullable: metadata.nullable, metadata };
+};
+
+const buildFromJsonExpression = (metadata, sourceExpression) => {
+  if (metadata.kind === 'list') {
+    const element = buildFromJsonExpression(metadata.elementType, 'it');
+    if (metadata.nullable) {
+      return `(${sourceExpression} as List<*>?)?.map { ${element} }`;
+    }
+    return `(${sourceExpression} as List<*>).map { ${element} }`;
+  }
+  if (metadata.kind === 'scalar') {
+    switch (metadata.name) {
+      case 'Float':
+        return metadata.nullable
+          ? `(${sourceExpression} as Number?)?.toDouble()`
+          : `(${sourceExpression} as Number).toDouble()`;
+      case 'Int':
+        return metadata.nullable
+          ? `(${sourceExpression} as Number?)?.toInt()`
+          : `(${sourceExpression} as Number).toInt()`;
+      case 'Boolean':
+        return metadata.nullable
+          ? `${sourceExpression} as Boolean?`
+          : `${sourceExpression} as Boolean`;
+      case 'ID':
+      case 'String':
+        return metadata.nullable
+          ? `${sourceExpression} as String?`
+          : `${sourceExpression} as String`;
+      default:
+        return metadata.nullable ? `${sourceExpression}` : `${sourceExpression}`;
+    }
+  }
+  if (metadata.kind === 'enum') {
+    return metadata.nullable
+      ? `(${sourceExpression} as String?)?.let { ${metadata.name}.fromJson(it) }`
+      : `${metadata.name}.fromJson(${sourceExpression} as String)`;
+  }
+  if (['object', 'input', 'interface', 'union'].includes(metadata.kind)) {
+    const cast = metadata.nullable
+      ? `(${sourceExpression} as Map<String, Any?>?)`
+      : `(${sourceExpression} as Map<String, Any?>)`;
+    const callTarget = metadata.name ?? metadata.kotlinType;
+    return metadata.nullable
+      ? `${cast}?.let { ${callTarget}.fromJson(it) }`
+      : `${callTarget}.fromJson(${cast})`;
+  }
+  return metadata.nullable ? `${sourceExpression}` : `${sourceExpression}`;
+};
+
+const buildToJsonExpression = (metadata, accessorExpression) => {
+  if (metadata.kind === 'list') {
+    const inner = buildToJsonExpression(metadata.elementType, 'it');
+    return metadata.nullable
+      ? `${accessorExpression}?.map { ${inner} }`
+      : `${accessorExpression}.map { ${inner} }`;
+  }
+  if (metadata.kind === 'enum') {
+    return metadata.nullable ? `${accessorExpression}?.toJson()` : `${accessorExpression}.toJson()`;
+  }
+  if (['object', 'input', 'interface', 'union'].includes(metadata.kind)) {
+    return metadata.nullable ? `${accessorExpression}?.toJson()` : `${accessorExpression}.toJson()`;
+  }
+  return accessorExpression;
+};
+
 const lines = [];
 lines.push(
   '// ============================================================================',
@@ -192,6 +309,16 @@ const printEnum = (enumType) => {
     const suffix = index === values.length - 1 ? '' : ',';
     lines.push(`    ${caseName}("${rawValue}")${suffix}`);
   });
+  lines.push('', '    companion object {');
+  lines.push(`        fun fromJson(value: String): ${enumType.name} = when (value) {`);
+  values.forEach((value) => {
+    const caseName = escapeKotlinName(pascalCase(value.name));
+    const rawValue = toConstantCase(value.name);
+    lines.push(`            "${rawValue}" -> ${enumType.name}.${caseName}`);
+  });
+  lines.push(`            else -> throw IllegalArgumentException("Unknown ${enumType.name} value: $value")`, '        }');
+  lines.push('    }', '');
+  lines.push('    fun toJson(): String = rawValue');
   lines.push('}', '');
 };
 
@@ -215,54 +342,105 @@ const printDataClass = (objectType) => {
   const unionInterfaces = unionMembership.has(objectType.name)
     ? Array.from(unionMembership.get(objectType.name)).sort()
     : [];
-  const conformances = ['public data class', `${objectType.name}(`];
   const fields = Object.values(objectType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
-  const propertyLines = [];
-  fields.forEach((field, index) => {
-    const { type, nullable } = getKotlinType(field.type);
-    const propertyType = type + (nullable ? '?' : '');
-    const propertyName = escapeKotlinName(field.name);
-    const defaultValue = nullable ? ' = null' : '';
-    addDocComment(propertyLines, field.description, '    ');
-    const suffix = index === fields.length - 1 ? '' : ',';
-    propertyLines.push(`    val ${propertyName}: ${propertyType}${defaultValue}${suffix}`);
-  });
   if (fields.length === 0) {
     lines.push(`public class ${objectType.name}`);
     lines.push('');
     return;
   }
-  lines.push(`${conformances[0]} ${conformances[1]}`);
-  lines.push(...propertyLines);
+  const fieldInfos = fields.map((field) => {
+    const { type, nullable, metadata } = getKotlinType(field.type);
+    const propertyType = type + (nullable ? '?' : '');
+    const propertyName = escapeKotlinName(field.name);
+    const defaultValue = nullable ? ' = null' : '';
+    return { field, propertyName, propertyType, defaultValue, metadata };
+  });
+  lines.push(`public data class ${objectType.name}(`);
+  fieldInfos.forEach(({ field, propertyName, propertyType, defaultValue }, index) => {
+    addDocComment(lines, field.description, '    ');
+    const suffix = index === fieldInfos.length - 1 ? '' : ',';
+    lines.push(`    val ${propertyName}: ${propertyType}${defaultValue}${suffix}`);
+  });
   const implementsList = [...interfacesForObject, ...unionInterfaces];
   if (implementsList.length > 0) {
-    lines.push(`) : ${implementsList.join(', ')}`);
+    lines.push(`) : ${implementsList.join(', ')} {`);
   } else {
-    lines.push(')');
+    lines.push(') {');
   }
-  lines.push('', '');
+  lines.push('');
+  lines.push('    companion object {');
+  lines.push(`        fun fromJson(json: Map<String, Any?>): ${objectType.name} {`);
+  lines.push(`            return ${objectType.name}(`);
+  fieldInfos.forEach(({ field, propertyName, metadata }) => {
+    const expression = buildFromJsonExpression(metadata, `json["${field.name}"]`);
+    lines.push(`                ${propertyName} = ${expression},`);
+  });
+  lines.push('            )');
+  lines.push('        }');
+  lines.push('    }', '');
+  const overrideKeyword = unionInterfaces.length > 0 ? 'override ' : '';
+  lines.push(`    ${overrideKeyword}fun toJson(): Map<String, Any?> = mapOf(`);
+  lines.push(`        "__typename" to "${objectType.name}",`);
+  fieldInfos.forEach(({ field, propertyName, metadata }) => {
+    const expression = buildToJsonExpression(metadata, propertyName);
+    lines.push(`        "${field.name}" to ${expression},`);
+  });
+  lines.push('    )');
+  lines.push('}', '');
 };
 
 const printInput = (inputType) => {
   addDocComment(lines, inputType.description);
   const fields = Object.values(inputType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
-  lines.push(`public data class ${inputType.name}(`);
-  fields.forEach((field, index) => {
-    const { type, nullable } = getKotlinType(field.type);
+  const fieldInfos = fields.map((field) => {
+    const { type, nullable, metadata } = getKotlinType(field.type);
     const propertyType = type + (nullable ? '?' : '');
     const propertyName = escapeKotlinName(field.name);
     const defaultValue = nullable ? ' = null' : '';
+    return { field, propertyName, propertyType, defaultValue, metadata };
+  });
+  lines.push(`public data class ${inputType.name}(`);
+  fieldInfos.forEach(({ field, propertyName, propertyType, defaultValue }, index) => {
     addDocComment(lines, field.description, '    ');
-    const suffix = index === fields.length - 1 ? '' : ',';
+    const suffix = index === fieldInfos.length - 1 ? '' : ',';
     lines.push(`    val ${propertyName}: ${propertyType}${defaultValue}${suffix}`);
   });
-  lines.push(')', '');
+  lines.push(') {');
+  lines.push('    companion object {');
+  lines.push(`        fun fromJson(json: Map<String, Any?>): ${inputType.name} {`);
+  lines.push(`            return ${inputType.name}(`);
+  fieldInfos.forEach(({ field, propertyName, metadata }) => {
+    const expression = buildFromJsonExpression(metadata, `json["${field.name}"]`);
+    lines.push(`                ${propertyName} = ${expression},`);
+  });
+  lines.push('            )');
+  lines.push('        }');
+  lines.push('    }', '');
+  lines.push('    fun toJson(): Map<String, Any?> = mapOf(');
+  fieldInfos.forEach(({ field, propertyName, metadata }) => {
+    const expression = buildToJsonExpression(metadata, propertyName);
+    lines.push(`        "${field.name}" to ${expression},`);
+  });
+  lines.push('    )');
+  lines.push('}', '');
 };
 
 const printUnion = (unionType) => {
   addDocComment(lines, unionType.description);
-  lines.push(`public sealed interface ${unionType.name}`);
-  lines.push('');
+  const members = unionType.getTypes().map((member) => member.name).sort();
+  lines.push(`public sealed interface ${unionType.name} {`);
+  lines.push('    fun toJson(): Map<String, Any?>', '');
+  lines.push('    companion object {');
+  lines.push(`        fun fromJson(json: Map<String, Any?>): ${unionType.name} {`);
+  lines.push('            return when (json["__typename"] as String?) {');
+  members.forEach((member) => {
+    lines.push(`                "${member}" -> ${member}.fromJson(json)`);
+  });
+  lines.push(`                else -> throw IllegalArgumentException("Unknown __typename for ${unionType.name}: ${'$'}{json["__typename"]}")`);
+  lines.push('            }');
+  lines.push('        }');
+  lines.push('    }');
+  lines.push('}', '');
 };
 
 const printOperationInterface = (operationType) => {
