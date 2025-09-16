@@ -2084,40 +2084,6 @@ class PurchaseOptions {
   }
 }
 
-class PurchaseParams {
-  const PurchaseParams({
-    /// Per-platform purchase request props
-    this.requestPurchase,
-    /// Per-platform subscription request props
-    this.requestSubscription,
-    /// Explicit purchase type hint (defaults to in-app)
-    this.type,
-  });
-
-  /// Per-platform purchase request props
-  final RequestPurchasePropsByPlatforms? requestPurchase;
-  /// Per-platform subscription request props
-  final RequestSubscriptionPropsByPlatforms? requestSubscription;
-  /// Explicit purchase type hint (defaults to in-app)
-  final ProductQueryType? type;
-
-  factory PurchaseParams.fromJson(Map<String, dynamic> json) {
-    return PurchaseParams(
-      requestPurchase: json['requestPurchase'] != null ? RequestPurchasePropsByPlatforms.fromJson(json['requestPurchase'] as Map<String, dynamic>) : null,
-      requestSubscription: json['requestSubscription'] != null ? RequestSubscriptionPropsByPlatforms.fromJson(json['requestSubscription'] as Map<String, dynamic>) : null,
-      type: json['type'] != null ? ProductQueryType.fromJson(json['type'] as String) : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'requestPurchase': requestPurchase?.toJson(),
-      'requestSubscription': requestSubscription?.toJson(),
-      'type': type?.toJson(),
-    };
-  }
-}
-
 class ReceiptValidationAndroidOptions {
   const ReceiptValidationAndroidOptions({
     required this.accessToken,
@@ -2265,31 +2231,84 @@ class RequestPurchaseIosProps {
 }
 
 class RequestPurchaseProps {
-  const RequestPurchaseProps({
-    /// Android-specific purchase parameters
-    this.android,
-    /// iOS-specific purchase parameters
-    this.ios,
-  });
+  RequestPurchaseProps({
+    required this.request,
+    ProductQueryType? type,
+  }) : type = type ?? (request is RequestPurchasePropsRequestPurchase
+          ? ProductQueryType.InApp
+          : ProductQueryType.Subs) {
+    if (request is RequestPurchasePropsRequestPurchase && this.type != ProductQueryType.InApp) {
+      throw ArgumentError('type must be IN_APP when requestPurchase is provided');
+    }
+    if (request is RequestPurchasePropsRequestSubscription && this.type != ProductQueryType.Subs) {
+      throw ArgumentError('type must be SUBS when requestSubscription is provided');
+    }
+  }
 
-  /// Android-specific purchase parameters
-  final RequestPurchaseAndroidProps? android;
-  /// iOS-specific purchase parameters
-  final RequestPurchaseIosProps? ios;
+  final RequestPurchasePropsRequest request;
+  final ProductQueryType type;
 
   factory RequestPurchaseProps.fromJson(Map<String, dynamic> json) {
-    return RequestPurchaseProps(
-      android: json['android'] != null ? RequestPurchaseAndroidProps.fromJson(json['android'] as Map<String, dynamic>) : null,
-      ios: json['ios'] != null ? RequestPurchaseIosProps.fromJson(json['ios'] as Map<String, dynamic>) : null,
-    );
+    final typeValue = json['type'] as String?;
+    final parsedType = typeValue != null ? ProductQueryType.fromJson(typeValue) : null;
+    final purchaseJson = json['requestPurchase'] as Map<String, dynamic>?;
+    if (purchaseJson != null) {
+      final request = RequestPurchasePropsRequestPurchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson));
+      final finalType = parsedType ?? ProductQueryType.InApp;
+      if (finalType != ProductQueryType.InApp) {
+        throw ArgumentError('type must be IN_APP when requestPurchase is provided');
+      }
+      return RequestPurchaseProps(request: request, type: finalType);
+    }
+    final subscriptionJson = json['requestSubscription'] as Map<String, dynamic>?;
+    if (subscriptionJson != null) {
+      final request = RequestPurchasePropsRequestSubscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson));
+      final finalType = parsedType ?? ProductQueryType.Subs;
+      if (finalType != ProductQueryType.Subs) {
+        throw ArgumentError('type must be SUBS when requestSubscription is provided');
+      }
+      return RequestPurchaseProps(request: request, type: finalType);
+    }
+    throw ArgumentError('RequestPurchaseProps requires requestPurchase or requestSubscription');
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'android': android?.toJson(),
-      'ios': ios?.toJson(),
-    };
+    if (request is RequestPurchasePropsRequestPurchase) {
+      return {
+        'requestPurchase': (request as RequestPurchasePropsRequestPurchase).value.toJson(),
+        'type': type.toJson(),
+      };
+    }
+    if (request is RequestPurchasePropsRequestSubscription) {
+      return {
+        'requestSubscription': (request as RequestPurchasePropsRequestSubscription).value.toJson(),
+        'type': type.toJson(),
+      };
+    }
+    throw StateError('Unsupported RequestPurchaseProps request variant');
   }
+
+  static RequestPurchaseProps inApp({required RequestPurchasePropsByPlatforms request}) {
+    return RequestPurchaseProps(request: RequestPurchasePropsRequestPurchase(request), type: ProductQueryType.InApp);
+  }
+
+  static RequestPurchaseProps subs({required RequestSubscriptionPropsByPlatforms request}) {
+    return RequestPurchaseProps(request: RequestPurchasePropsRequestSubscription(request), type: ProductQueryType.Subs);
+  }
+}
+
+sealed class RequestPurchasePropsRequest {
+  const RequestPurchasePropsRequest();
+}
+
+class RequestPurchasePropsRequestPurchase extends RequestPurchasePropsRequest {
+  const RequestPurchasePropsRequestPurchase(this.value);
+  final RequestPurchasePropsByPlatforms value;
+}
+
+class RequestPurchasePropsRequestSubscription extends RequestPurchasePropsRequest {
+  const RequestPurchasePropsRequestSubscription(this.value);
+  final RequestSubscriptionPropsByPlatforms value;
 }
 
 class RequestPurchasePropsByPlatforms {
@@ -2444,7 +2463,7 @@ class RequestSubscriptionPropsByPlatforms {
 
 // MARK: - Unions
 
-sealed class Product {
+sealed class Product implements ProductCommon {
   const Product();
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -2458,10 +2477,31 @@ sealed class Product {
     throw ArgumentError('Unknown __typename for Product: $typeName');
   }
 
+  @override
+  String get currency;
+  @override
+  String? get debugDescription;
+  @override
+  String get description;
+  @override
+  String? get displayName;
+  @override
+  String get displayPrice;
+  @override
+  String get id;
+  @override
+  IapPlatform get platform;
+  @override
+  double? get price;
+  @override
+  String get title;
+  @override
+  ProductType get type;
+
   Map<String, dynamic> toJson();
 }
 
-sealed class ProductSubscription {
+sealed class ProductSubscription implements ProductCommon {
   const ProductSubscription();
 
   factory ProductSubscription.fromJson(Map<String, dynamic> json) {
@@ -2475,10 +2515,31 @@ sealed class ProductSubscription {
     throw ArgumentError('Unknown __typename for ProductSubscription: $typeName');
   }
 
+  @override
+  String get currency;
+  @override
+  String? get debugDescription;
+  @override
+  String get description;
+  @override
+  String? get displayName;
+  @override
+  String get displayPrice;
+  @override
+  String get id;
+  @override
+  IapPlatform get platform;
+  @override
+  double? get price;
+  @override
+  String get title;
+  @override
+  ProductType get type;
+
   Map<String, dynamic> toJson();
 }
 
-sealed class Purchase {
+sealed class Purchase implements PurchaseCommon {
   const Purchase();
 
   factory Purchase.fromJson(Map<String, dynamic> json) {
@@ -2491,6 +2552,26 @@ sealed class Purchase {
     }
     throw ArgumentError('Unknown __typename for Purchase: $typeName');
   }
+
+  @override
+  String get id;
+  @override
+  List<String>? get ids;
+  @override
+  bool get isAutoRenewing;
+  @override
+  IapPlatform get platform;
+  @override
+  String get productId;
+  @override
+  PurchaseState get purchaseState;
+  /// Unified purchase token (iOS JWS, Android purchaseToken)
+  @override
+  String? get purchaseToken;
+  @override
+  int get quantity;
+  @override
+  double get transactionDate;
 
   Map<String, dynamic> toJson();
 }
@@ -2547,7 +2628,7 @@ abstract class MutationResolver {
   Future<VoidResult> presentCodeRedemptionSheetIOS();
   /// Initiate a purchase flow; rely on events for final state
   Future<RequestPurchaseResult?> requestPurchase({
-    required PurchaseParams params,
+    required RequestPurchaseProps params,
   });
   /// Purchase the promoted product surfaced by the App Store
   Future<PurchaseIOS> requestPurchaseOnPromotedProductIOS();

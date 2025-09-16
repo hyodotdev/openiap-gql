@@ -106,7 +106,7 @@ input PurchaseOptions {
 }
 
 # Parameters for requestPurchase
-input PurchaseParams {
+input RequestPurchaseProps {
   """
   Per-platform purchase request props
   """
@@ -147,17 +147,6 @@ input DeepLinkOptions {
 }
 
 # Request props (platform-specific containers)
-input RequestPurchaseProps {
-  """
-  iOS-specific purchase parameters
-  """
-  ios: RequestPurchaseIosProps
-  """
-  Android-specific purchase parameters
-  """
-  android: RequestPurchaseAndroidProps
-}
-
 input RequestPurchasePropsByPlatforms {
   """
   iOS-specific purchase parameters

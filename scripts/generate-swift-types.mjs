@@ -248,6 +248,75 @@ const printObject = (objectType) => {
 };
 
 const printInput = (inputType) => {
+  if (inputType.name === 'RequestPurchaseProps') {
+    addDocComment(lines, inputType.description);
+    lines.push('public struct RequestPurchaseProps: Codable {');
+    lines.push('    public var request: Request');
+    lines.push('    public var type: ProductQueryType');
+    lines.push('');
+    lines.push('    public init(request: Request, type: ProductQueryType? = nil) {');
+    lines.push('        switch request {');
+    lines.push('        case .purchase:');
+    lines.push('            let resolved = type ?? .inApp');
+    lines.push('            precondition(resolved == .inApp, "RequestPurchaseProps.type must be .inApp when request is purchase")');
+    lines.push('            self.type = resolved');
+    lines.push('        case .subscription:');
+    lines.push('            let resolved = type ?? .subs');
+    lines.push('            precondition(resolved == .subs, "RequestPurchaseProps.type must be .subs when request is subscription")');
+    lines.push('            self.type = resolved');
+    lines.push('        }');
+    lines.push('        self.request = request');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    private enum CodingKeys: String, CodingKey {');
+    lines.push('        case requestPurchase');
+    lines.push('        case requestSubscription');
+    lines.push('        case type');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    public init(from decoder: Decoder) throws {');
+    lines.push('        let container = try decoder.container(keyedBy: CodingKeys.self)');
+    lines.push('        let decodedType = try container.decodeIfPresent(ProductQueryType.self, forKey: .type)');
+    lines.push('        if let purchase = try container.decodeIfPresent(RequestPurchasePropsByPlatforms.self, forKey: .requestPurchase) {');
+    lines.push('            let finalType = decodedType ?? .inApp');
+    lines.push('            guard finalType == .inApp else {');
+    lines.push('                throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "type must be IN_APP when requestPurchase is provided")');
+    lines.push('            }');
+    lines.push('            self.request = .purchase(purchase)');
+    lines.push('            self.type = finalType');
+    lines.push('            return');
+    lines.push('        }');
+    lines.push('        if let subscription = try container.decodeIfPresent(RequestSubscriptionPropsByPlatforms.self, forKey: .requestSubscription) {');
+    lines.push('            let finalType = decodedType ?? .subs');
+    lines.push('            guard finalType == .subs else {');
+    lines.push('                throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "type must be SUBS when requestSubscription is provided")');
+    lines.push('            }');
+    lines.push('            self.request = .subscription(subscription)');
+    lines.push('            self.type = finalType');
+    lines.push('            return');
+    lines.push('        }');
+    lines.push('        throw DecodingError.dataCorruptedError(forKey: .requestPurchase, in: container, debugDescription: "RequestPurchaseProps requires requestPurchase or requestSubscription.")');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    public func encode(to encoder: Encoder) throws {');
+    lines.push('        var container = encoder.container(keyedBy: CodingKeys.self)');
+    lines.push('        switch request {');
+    lines.push('        case let .purchase(value):');
+    lines.push('            try container.encode(value, forKey: .requestPurchase)');
+    lines.push('        case let .subscription(value):');
+    lines.push('            try container.encode(value, forKey: .requestSubscription)');
+    lines.push('        }');
+    lines.push('        try container.encode(type, forKey: .type)');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    public enum Request {');
+    lines.push('        case purchase(RequestPurchasePropsByPlatforms)');
+    lines.push('        case subscription(RequestSubscriptionPropsByPlatforms)');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+    return;
+  }
   addDocComment(lines, inputType.description);
   lines.push(`public struct ${inputType.name}: Codable {`);
   const fields = Object.values(inputType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
@@ -267,12 +336,70 @@ const printInput = (inputType) => {
 
 const printUnion = (unionType) => {
   addDocComment(lines, unionType.description);
-  lines.push(`public enum ${unionType.name} {`);
-  const types = unionType.getTypes();
-  for (const member of types) {
-    const caseName = escapeSwiftName(lowerCamelCase(member.name));
-    lines.push(`    case ${caseName}(${member.name})`);
+  const memberTypes = unionType.getTypes();
+  const caseInfos = memberTypes.map((member) => ({
+    typeName: member.name,
+    caseName: escapeSwiftName(lowerCamelCase(member.name)),
+  }));
+
+  let sharedInterfaceNames = [];
+  if (memberTypes.length > 0) {
+    const [firstMember, ...otherMembers] = memberTypes;
+    const firstInterfaces = new Set(firstMember.getInterfaces().map((iface) => iface.name));
+    for (const member of otherMembers) {
+      const memberInterfaces = new Set(member.getInterfaces().map((iface) => iface.name));
+      for (const ifaceName of Array.from(firstInterfaces)) {
+        if (!memberInterfaces.has(ifaceName)) {
+          firstInterfaces.delete(ifaceName);
+        }
+      }
+    }
+    sharedInterfaceNames = Array.from(firstInterfaces).sort();
   }
+
+  const conformances = ['Codable', ...sharedInterfaceNames];
+  const conformanceClause = conformances.length ? `: ${conformances.join(', ')}` : '';
+
+  lines.push(`public enum ${unionType.name}${conformanceClause} {`);
+  caseInfos.forEach(({ typeName, caseName }) => {
+    lines.push(`    case ${caseName}(${typeName})`);
+  });
+
+  if (sharedInterfaceNames.length) {
+    const interfaceFieldMap = new Map();
+    for (const interfaceName of sharedInterfaceNames) {
+      const interfaceType = schema.getType(interfaceName);
+      if (!interfaceType || !isInterfaceType(interfaceType)) continue;
+      const fields = Object.values(interfaceType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+      for (const field of fields) {
+        if (interfaceFieldMap.has(field.name)) continue;
+        const { type, optional } = swiftTypeFor(field.type);
+        interfaceFieldMap.set(field.name, { field, type, optional });
+      }
+    }
+
+    const interfaceFields = Array.from(interfaceFieldMap.values()).sort((a, b) => a.field.name.localeCompare(b.field.name));
+    if (interfaceFields.length) {
+      lines.push('');
+    }
+    interfaceFields.forEach(({ field, type, optional }, index) => {
+      addDocComment(lines, field.description, '    ');
+      const propertyType = type + (optional ? '?' : '');
+      const propertyName = escapeSwiftName(field.name);
+      lines.push(`    public var ${propertyName}: ${propertyType} {`);
+      lines.push('        switch self {');
+      caseInfos.forEach(({ caseName }) => {
+        lines.push(`        case let .${caseName}(value):`);
+        lines.push(`            return value.${propertyName}`);
+      });
+      lines.push('        }');
+      lines.push('    }');
+      if (index < interfaceFields.length - 1) {
+        lines.push('');
+      }
+    });
+  }
+
   lines.push('}', '');
 };
 
