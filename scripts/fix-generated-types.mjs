@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { parse } from 'graphql';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,6 +11,17 @@ const schemaFiles = [
   resolve(__dirname, '../src/api-ios.graphql'),
   resolve(__dirname, '../src/api-android.graphql'),
 ];
+const schemaDefinitionFiles = [
+  '../src/schema.graphql',
+  '../src/type.graphql',
+  '../src/type-ios.graphql',
+  '../src/type-android.graphql',
+  '../src/api.graphql',
+  '../src/api-ios.graphql',
+  '../src/api-android.graphql',
+  '../src/error.graphql',
+  '../src/event.graphql',
+].map((relativePath) => resolve(__dirname, relativePath));
 
 let content = readFileSync(targetPath, 'utf8');
 
@@ -32,6 +44,24 @@ const scalarReplacements = new Map([
 for (const [from, to] of scalarReplacements) {
   const pattern = new RegExp(from.replace(/[[\]]/g, (m) => `\\${m}`), 'g');
   content = content.replace(pattern, to);
+}
+
+const iosTypeMap = new Map();
+for (const schemaPath of schemaDefinitionFiles) {
+  const sdl = readFileSync(schemaPath, 'utf8');
+  const document = parse(sdl, { noLocation: true });
+  for (const definition of document.definitions) {
+    if (!definition.name) continue;
+    const name = definition.name.value;
+    if (!name.includes('IOS')) continue;
+    const tsName = name.replace(/IOS/g, 'Ios');
+    iosTypeMap.set(tsName, name);
+  }
+}
+
+for (const [tsName, iosName] of iosTypeMap) {
+  const pattern = new RegExp(`\\b${tsName}\\b`, 'g');
+  content = content.replace(pattern, iosName);
 }
 
 const removeDefinition = (keyword) => {
