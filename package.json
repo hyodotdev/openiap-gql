@@ -4,7 +4,11 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "generate": "graphql-codegen --config codegen.ts && node scripts/fix-generated-types.mjs"
+    "generate": "npm run generate:ts && npm run generate:swift && npm run generate:kotlin && npm run generate:dart",
+    "generate:ts": "graphql-codegen --config codegen.ts && node scripts/fix-generated-types.mjs",
+    "generate:swift": "node scripts/generate-swift-types.mjs",
+    "generate:kotlin": "node scripts/generate-kotlin-types.mjs",
+    "generate:dart": "node scripts/generate-dart-types.mjs"
   },
   "keywords": [],
   "author": "",
