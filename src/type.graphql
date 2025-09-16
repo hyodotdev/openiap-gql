@@ -1,0 +1,211 @@
+# openiap.dev GraphQL Types for cross-platform IAP (common)
+
+# Platform discriminators
+enum Platform {
+  Ios
+  Android
+}
+
+# Common product types
+enum ProductType {
+  InApp
+  Subs
+}
+
+# Purchase lifecycle states
+enum PurchaseState {
+  Pending
+  Purchased
+  Failed
+  Restored
+  Deferred
+  Unknown
+}
+
+# Event types emitted by OpenIAP listeners
+enum IapEvent {
+  PurchaseUpdated
+  PurchaseError
+  PromotedProductIos
+}
+
+# Common product fields
+interface ProductCommon {
+  id: ID!
+  title: String!
+  description: String!
+  type: ProductType!
+  displayName: String
+  displayPrice: String!
+  currency: String!
+  price: Float
+  debugDescription: String
+  platform: Platform!
+}
+
+# Common purchase fields
+interface PurchaseCommon {
+  id: ID!
+  productId: String!
+  ids: [String!]
+  transactionDate: Float!
+  """
+  Unified purchase token (iOS JWS, Android purchaseToken)
+  """
+  purchaseToken: String
+  platform: Platform!
+  quantity: Int!
+  purchaseState: PurchaseState!
+  isAutoRenewing: Boolean!
+}
+
+# Unions for platform-specific types
+union Product = ProductAndroid | ProductIOS
+union ProductSubscription = ProductSubscriptionAndroid | ProductSubscriptionIOS
+union Purchase = PurchaseAndroid | PurchaseIOS
+
+# Generic result for APIs that do not return payloads
+type VoidResult {
+  success: Boolean!
+}
+
+# Product fetch responses can return products, subscriptions, or both
+type FetchProductsResult {
+  products: [Product!]
+  subscriptions: [ProductSubscription!]
+}
+
+# Result container for requestPurchase (iOS returns a single purchase, Android an array)
+type RequestPurchaseResult {
+  purchase: Purchase
+  purchases: [Purchase!]
+}
+
+# Product request parameters
+enum ProductQueryType {
+  InApp
+  Subs
+  All
+}
+
+input ProductRequest {
+  skus: [String!]!
+  type: ProductQueryType = InApp
+}
+
+# Optional filters when querying existing purchases or subscriptions
+input PurchaseOptions {
+  """
+  Also emit results through the iOS event listeners
+  """
+  alsoPublishToEventListenerIOS: Boolean
+  """
+  Limit to currently active items on iOS
+  """
+  onlyIncludeActiveItemsIOS: Boolean
+}
+
+# Parameters for requestPurchase
+input PurchaseParams {
+  """
+  Per-platform purchase request props
+  """
+  requestPurchase: RequestPurchasePropsByPlatforms
+  """
+  Per-platform subscription request props
+  """
+  requestSubscription: RequestSubscriptionPropsByPlatforms
+  """
+  Explicit purchase type hint (defaults to in-app)
+  """
+  type: ProductQueryType = InApp
+}
+
+# Minimal purchase information required to finish transactions
+input PurchaseInput {
+  id: ID!
+  productId: String!
+  ids: [String!]
+  transactionDate: Float!
+  purchaseToken: String
+  platform: Platform!
+  quantity: Int!
+  purchaseState: PurchaseState!
+  isAutoRenewing: Boolean!
+}
+
+# Options for deep linking into subscription management
+input DeepLinkOptions {
+  """
+  Android SKU to open (required on Android)
+  """
+  skuAndroid: String
+  """
+  Android package name to target (required on Android)
+  """
+  packageNameAndroid: String
+}
+
+# Request props (platform-specific containers)
+input RequestPurchaseProps {
+  """
+  iOS-specific purchase parameters
+  """
+  ios: RequestPurchaseIosProps
+  """
+  Android-specific purchase parameters
+  """
+  android: RequestPurchaseAndroidProps
+}
+
+input RequestPurchasePropsByPlatforms {
+  """
+  iOS-specific purchase parameters
+  """
+  ios: RequestPurchaseIosProps
+  """
+  Android-specific purchase parameters
+  """
+  android: RequestPurchaseAndroidProps
+}
+
+input RequestSubscriptionPropsByPlatforms {
+  """
+  iOS-specific subscription parameters
+  """
+  ios: RequestPurchaseIosProps
+  """
+  Android-specific subscription parameters
+  """
+  android: RequestSubscriptionAndroidProps
+}
+
+# Receipt validation inputs and results
+input ReceiptValidationProps {
+  """
+  Product SKU to validate
+  """
+  sku: String!
+  """
+  Android-specific validation options
+  """
+  androidOptions: ReceiptValidationAndroidOptions
+}
+
+union ReceiptValidationResult =
+    ReceiptValidationResultAndroid
+  | ReceiptValidationResultIOS
+
+# Aggregated active subscription data across platforms
+type ActiveSubscription {
+  productId: String!
+  isActive: Boolean!
+  expirationDateIOS: Float
+  autoRenewingAndroid: Boolean
+  environmentIOS: String
+  willExpireSoon: Boolean
+  daysUntilExpirationIOS: Float
+  transactionId: String!
+  purchaseToken: String
+  transactionDate: Float!
+}

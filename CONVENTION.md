@@ -1,0 +1,76 @@
+# GraphQL Naming Conventions
+
+This repo standardizes schema and identifier naming to improve clarity across platforms.
+
+## Files
+
+- `src/type.graphql`: common cross‑platform SDL only.
+- `src/type-ios.graphql`: iOS‑specific SDL only.
+- `src/type-android.graphql`: Android‑specific SDL only.
+
+## Platform Suffix Rules
+
+- iOS‑specific identifiers include `IOS` when it appears as the final suffix.
+  - Example: `buyProductIOS`, `SubscriptionPeriodIOS`, `ReceiptValidationResultIOS`.
+- If the iOS marker appears mid‑identifier (i.e., more words follow), use `Ios`.
+  - Example: `ProductIosType`, `RequestPurchaseIosProps`.
+- Android‑specific identifiers use `Android` (PascalCase) and typically as a suffix.
+  - Example: `ProductAndroid`, `PurchaseAndroid`, `RequestSubscriptionAndroidProps`.
+
+## Type and Field Casing
+
+- Types, interfaces, inputs, unions: PascalCase.
+- Fields and arguments: camelCase.
+- iOS/Android fields should follow the same suffix rules as types
+  (e.g., `displayNameIOS`, `offerTokenAndroid`).
+- Enum values in SDL are written in PascalCase. The TypeScript codegen step
+  normalizes the emitted string literal to UPPER_SNAKE_CASE so the runtime
+  values remain easy to compare against constants.
+
+## Enums
+
+- Enum names: PascalCase (e.g., `ProductType`).
+- Enum values: PascalCase to keep them visually distinct from type names.
+  - Examples: `Consumable`, `FreeTrial`, `PayAsYouGo`, `Ios`, `Android`.
+
+## Defaults
+
+- Prefer explicit defaults for input fields and arguments using `=` in SDL.
+  - Example: `type: ProductQueryType = inApp`.
+- Document defaults in the field description if behavior matters.
+
+## Unions
+
+- Cross‑platform unions combine platform types (e.g., `Product = ProductAndroid | ProductIOS`).
+
+## SDL Organization Guidance
+
+- Common interfaces and shared inputs remain in `type.graphql`.
+- Platform-specific types/inputs/enums live in their respective files and include
+  platform suffixes per the above rules.
+- List all enum declarations at the top of each SDL file, before type, interface,
+  or input definitions.
+
+## Examples
+
+- iOS types: `ProductIOS`, `ProductSubscriptionIOS`, `SubscriptionInfoIOS`, `RenewalInfoIOS`.
+- iOS inputs: `RequestPurchaseIosProps`, `DiscountOfferInputIOS`.
+- Android types: `ProductAndroid`, `ProductSubscriptionAndroid`.
+- Enums: `ProductTypeIOS { Consumable, NonConsumable }`,
+  `PaymentModeIOS { FreeTrial, PayAsYouGo }`.
+- When multiple platform types share a base interface, keep the common prefix
+  aligned across the variants. Example: the `ProductCommon` interface is
+  implemented by `ProductAndroid`, `ProductIOS`, `ProductSubscriptionAndroid`,
+  and `ProductSubscriptionIOS` so they are easy to discover together.
+
+## Notes
+
+- Enum values are API‑visible; changing them is a breaking change.
+- Keep platform suffixes consistent to avoid ambiguity in codegen and resolvers.
+- Resolver fields (Query/Mutation) model asynchronous behavior. The docs refer
+  to these as `Future`. Use a `# Future` inline comment in the SDL to make that
+  intent explicit for documentation tooling, even though the generated
+  TypeScript types currently expose their raw GraphQL types.
+  - When feeding new APIs into the openiap.dev docs, always add this `# Future`
+    comment so the codegen post-processing rewrites the generated types to
+    return `Promise<…>` and the documentation stays accurate.

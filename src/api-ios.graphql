@@ -1,0 +1,92 @@
+# iOS-specific API operations
+
+extend type Query {
+  """
+  Get the current App Store storefront country code
+  """
+  # Future
+  getStorefrontIOS: String!
+  """
+  Get the currently promoted product (iOS 11+)
+  """
+  # Future
+  getPromotedProductIOS: ProductIOS
+  """
+  Retrieve all pending transactions in the StoreKit queue
+  """
+  # Future
+  getPendingTransactionsIOS: [PurchaseIOS!]!
+  """
+  Check introductory offer eligibility for specific products
+  """
+  # Future
+  isEligibleForIntroOfferIOS(productIds: [String!]!): Boolean!
+  """
+  Get StoreKit 2 subscription status details (iOS 15+)
+  """
+  # Future
+  subscriptionStatusIOS(skus: [String!]): [SubscriptionStatusIOS!]!
+  """
+  Get current StoreKit 2 entitlements (iOS 15+)
+  """
+  # Future
+  currentEntitlementIOS(skus: [String!]): [EntitlementIOS!]!
+  """
+  Get the latest transaction for a product using StoreKit 2
+  """
+  # Future
+  latestTransactionIOS(sku: String!): PurchaseIOS
+  """
+  Verify a StoreKit 2 transaction signature
+  """
+  # Future
+  isTransactionVerifiedIOS(transactionId: String!): Boolean!
+  """
+  Get the transaction JWS (StoreKit 2)
+  """
+  # Future
+  getTransactionJwsIOS(transactionId: String!): String!
+  """
+  Get base64-encoded receipt data for validation
+  """
+  # Future
+  getReceiptDataIOS: String!
+  """
+  Fetch the current app transaction (iOS 16+)
+  """
+  # Future
+  getAppTransactionIOS: AppTransaction
+}
+
+extend type Mutation {
+  """
+  Clear pending transactions from the StoreKit payment queue
+  """
+  # Future
+  clearTransactionIOS: VoidResult!
+  """
+  Purchase the promoted product surfaced by the App Store
+  """
+  # Future
+  requestPurchaseOnPromotedProductIOS: PurchaseIOS!
+  """
+  Open subscription management UI and return changed purchases (iOS 15+)
+  """
+  # Future
+  showManageSubscriptionsIOS: [PurchaseIOS!]!
+  """
+  Initiate a refund request for a product (iOS 15+)
+  """
+  # Future
+  beginRefundRequestIOS(sku: String!): RefundResultIOS!
+  """
+  Force a StoreKit sync for transactions (iOS 15+)
+  """
+  # Future
+  syncIOS: VoidResult!
+  """
+  Present the App Store code redemption sheet
+  """
+  # Future
+  presentCodeRedemptionSheetIOS: VoidResult!
+}

@@ -1,0 +1,14 @@
+# Android-specific API operations
+
+extend type Mutation {
+  """
+  Acknowledge a non-consumable purchase or subscription
+  """
+  # Future
+  acknowledgePurchaseAndroid(purchaseToken: String!): VoidResult!
+  """
+  Consume a purchase token so it can be repurchased
+  """
+  # Future
+  consumePurchaseAndroid(purchaseToken: String!): VoidResult!
+}
