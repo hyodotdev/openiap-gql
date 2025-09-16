@@ -152,4 +152,6 @@ const wrapReturns = (interfaceName) => {
 wrapReturns('Query');
 wrapReturns('Mutation');
 
+content = content.replace(/^\s*_placeholder\??: [^;]+;\n/gm, '');
+
 writeFileSync(targetPath, content);

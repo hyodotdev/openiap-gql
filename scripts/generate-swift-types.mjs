@@ -280,7 +280,9 @@ const printOperationProtocol = (operationType) => {
   const protocolName = `${operationType.name}Resolver`;
   addDocComment(lines, operationType.description ?? `GraphQL root ${operationType.name.toLowerCase()} operations.`);
   lines.push(`public protocol ${protocolName} {`);
-  const fields = Object.values(operationType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+  const fields = Object.values(operationType.getFields())
+    .filter((field) => field.name !== '_placeholder')
+    .sort((a, b) => a.name.localeCompare(b.name));
   if (fields.length === 0) {
     lines.push('    // No operations defined.');
   }

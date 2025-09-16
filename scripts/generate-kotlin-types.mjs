@@ -269,7 +269,9 @@ const printOperationInterface = (operationType) => {
   const interfaceName = `${operationType.name}Resolver`;
   addDocComment(lines, operationType.description ?? `GraphQL root ${operationType.name.toLowerCase()} operations.`);
   lines.push(`public interface ${interfaceName} {`);
-  const fields = Object.values(operationType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+  const fields = Object.values(operationType.getFields())
+    .filter((field) => field.name !== '_placeholder')
+    .sort((a, b) => a.name.localeCompare(b.name));
   for (const field of fields) {
     addDocComment(lines, field.description, '    ');
     const { type, nullable } = getKotlinType(field.type);

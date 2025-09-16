@@ -53,7 +53,16 @@ const dartKeywords = new Set([
   'yield',
 ]);
 
-const escapeDartName = (name) => (dartKeywords.has(name) ? `_${name}` : name);
+const dartKeywordOverrides = new Map([
+  ['deferred', 'deferred'],
+]);
+
+const escapeDartName = (name) => {
+  if (dartKeywordOverrides.has(name)) {
+    return dartKeywordOverrides.get(name);
+  }
+  return dartKeywords.has(name) ? `_${name}` : name;
+};
 
 const toCamelCase = (value, upper = false) => {
   const tokens = value
@@ -157,6 +166,8 @@ lines.push(
   "// Run `npm run generate` after updating any *.graphql schema file.",
   '// ============================================================================',
   '',
+  '// ignore_for_file: unused_element, unused_field',
+  '',
   "import 'dart:async';",
   '',
 );
@@ -253,7 +264,9 @@ const printOperationInterface = (operationType) => {
   const interfaceName = `${operationType.name}Resolver`;
   addDocComment(lines, operationType.description ?? `GraphQL root ${operationType.name.toLowerCase()} operations.`);
   lines.push(`abstract class ${interfaceName} {`);
-  const fields = Object.values(operationType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+  const fields = Object.values(operationType.getFields())
+    .filter((field) => field.name !== '_placeholder')
+    .sort((a, b) => a.name.localeCompare(b.name));
   for (const field of fields) {
     addDocComment(lines, field.description, '  ');
     const { type, nullable } = getDartType(field.type);

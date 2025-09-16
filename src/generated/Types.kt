@@ -729,7 +729,6 @@ public sealed interface ReceiptValidationResult
  * GraphQL root mutation operations.
  */
 public interface MutationResolver {
-    suspend fun _placeholder(): Boolean?
     /**
      * Acknowledge a non-consumable purchase or subscription
      */
@@ -796,7 +795,6 @@ public interface MutationResolver {
  * GraphQL root query operations.
  */
 public interface QueryResolver {
-    suspend fun _placeholder(): Boolean?
     /**
      * Get current StoreKit 2 entitlements (iOS 15+)
      */
@@ -863,7 +861,6 @@ public interface QueryResolver {
  * GraphQL root subscription operations.
  */
 public interface SubscriptionResolver {
-    suspend fun _placeholder(): Boolean?
     /**
      * Fires when the App Store surfaces a promoted product (iOS only)
      */

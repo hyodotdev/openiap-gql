@@ -1,13 +1,23 @@
 # openiap-gql Code Generation Guide
 
-This repository is the single source of truth for the OpenIAP GraphQL schema.  The SDL
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="./logo.png" alt="OpenIAP GraphQL logo" width="320" />
+  <br />
+  <strong>OpenIAP meets GraphQL</strong>
+</p>
+<!-- markdownlint-enable MD033 -->
+
+_Unified schema and multiplatform codegen toolkit for OpenIAP._
+
+This repository is the single source of truth for the OpenIAP GraphQL schema. The SDL
 files live in `src/` and are split into common (`type.graphql`, `api.graphql`), error
 taxonomy (`error.graphql`), and platform-specific (`*-ios.graphql`, `*-android.graphql`)
 definitions.
 
 To keep every consumer in sync, code generation helpers are provided for
-TypeScript, Dart, Swift, and Kotlin.  Each section below explains the tooling,
-commands, and output locations.  Update the schema files first, then rerun the
+TypeScript, Dart, Swift, and Kotlin. Each section below explains the tooling,
+commands, and output locations. Update the schema files first, then rerun the
 appropriate generator for your target language.
 
 ---
@@ -21,7 +31,7 @@ Uses [`@graphql-codegen/cli`](https://www.the-guild.dev/graphql/codegen).
 3. Generate types: `npm run generate`
 4. Generated output: `src/generated/types.ts`
 
-Configuration lives in `codegen.ts`.  The script merges every SDL file and
+Configuration lives in `codegen.ts`. The script merges every SDL file and
 emits a schema-first type layer that mirrors the documented shapes.
 
 ---
@@ -29,7 +39,7 @@ emits a schema-first type layer that mirrors the documented shapes.
 ## Dart
 
 Uses [`graphql_codegen`](https://pub.dev/packages/graphql_codegen) with
-`build_runner`.  A ready-to-use package scaffold is located in
+`build_runner`. A ready-to-use package scaffold is located in
 `generators/dart/`.
 
 1. Install Dart 3.0+.
@@ -40,7 +50,7 @@ Uses [`graphql_codegen`](https://pub.dev/packages/graphql_codegen) with
 6. Generated output: `generators/dart/lib/generated/`
 
 The `pubspec.yaml` and `build.yaml` already point the generator at the shared
-schema files in `../src`.  Customize package name, output path, and scalars as
+schema files in `../src`. Customize package name, output path, and scalars as
 needed for your application.
 
 ---
@@ -48,14 +58,14 @@ needed for your application.
 ## Swift
 
 Relies on the official [Apollo iOS CLI](https://www.apollographql.com/docs/ios/)
-for schema codegen.  A helper script is provided in `generators/swift/`.
+for schema codegen. A helper script is provided in `generators/swift/`.
 
 1. Install the CLI (one time): `brew install apollo-ios-cli`
 2. Run the helper: `generators/swift/generate-swift.sh`
 3. Generated output: `generators/swift/Generated/`
 
 The script passes every SDL file to the CLI and emits an embedded module named
-`OpenIAPGraphQL`.  Adjust the script flags to fit your Xcode project (e.g.
+`OpenIAPGraphQL`. Adjust the script flags to fit your Xcode project (e.g.
 `--module-type swiftPackage` or supply operation files via `--operation-paths`).
 
 ---
@@ -63,7 +73,7 @@ The script passes every SDL file to the CLI and emits an embedded module named
 ## Kotlin
 
 Recommended tooling is [Apollo Kotlin](https://www.apollographql.com/docs/kotlin).
-Use the Gradle plugin inside your Android project to consume the schema.  Add a
+Use the Gradle plugin inside your Android project to consume the schema. Add a
 codegen module (e.g. `:openiap-graphql`) and configure it as follows:
 
 ```kotlin
@@ -93,14 +103,14 @@ dependencies {
 ```
 
 Then run `./gradlew :openiap-graphql:generateApolloSources` to regenerate the
-models.  Keep your query/mutation documents under `src/main/graphql` inside that
+models. Keep your query/mutation documents under `src/main/graphql` inside that
 module.
 
 ---
 
 ## Workflow Tips
 
-- Treat the SDL files in `src/` as the canonical schema.  Commit schema updates
+- Treat the SDL files in `src/` as the canonical schema. Commit schema updates
   before shipping generated code.
 - Regenerate types whenever you change schema shape or add operations in your
   client projects.

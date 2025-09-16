@@ -615,7 +615,6 @@ public enum ReceiptValidationResult {
 
 /// GraphQL root mutation operations.
 public protocol MutationResolver {
-    func _placeholder() async throws -> Bool?
     /// Acknowledge a non-consumable purchase or subscription
     func acknowledgePurchaseAndroid(purchaseToken: String) async throws -> VoidResult
     /// Initiate a refund request for a product (iOS 15+)
@@ -650,7 +649,6 @@ public protocol MutationResolver {
 
 /// GraphQL root query operations.
 public protocol QueryResolver {
-    func _placeholder() async throws -> Bool?
     /// Get current StoreKit 2 entitlements (iOS 15+)
     func currentEntitlementIOS(skus: [String]? = nil) async throws -> [EntitlementIOS]
     /// Retrieve products or subscriptions from the store
@@ -685,7 +683,6 @@ public protocol QueryResolver {
 
 /// GraphQL root subscription operations.
 public protocol SubscriptionResolver {
-    func _placeholder() async throws -> Bool?
     /// Fires when the App Store surfaces a promoted product (iOS only)
     func promotedProductIOS() async throws -> String
     /// Fires when a purchase fails or is cancelled

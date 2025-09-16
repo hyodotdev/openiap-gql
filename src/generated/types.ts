@@ -138,7 +138,6 @@ export enum IapEvent {
 }
 
 export interface Mutation {
-  _placeholder?: (boolean | null);
   /** Acknowledge a non-consumable purchase or subscription */
   acknowledgePurchaseAndroid: Promise<VoidResult>;
   /** Initiate a refund request for a product (iOS 15+) */
@@ -480,7 +479,6 @@ export enum PurchaseState {
 }
 
 export interface Query {
-  _placeholder?: (boolean | null);
   /** Get current StoreKit 2 entitlements (iOS 15+) */
   currentEntitlementIOS: Promise<EntitlementIos[]>;
   /** Retrieve products or subscriptions from the store */
@@ -698,7 +696,6 @@ export interface RequestSubscriptionPropsByPlatforms {
 }
 
 export interface Subscription {
-  _placeholder?: (boolean | null);
   /** Fires when the App Store surfaces a promoted product (iOS only) */
   promotedProductIOS: string;
   /** Fires when a purchase fails or is cancelled */

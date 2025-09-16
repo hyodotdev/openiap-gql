@@ -3,6 +3,8 @@
 // Run `npm run generate` after updating any *.graphql schema file.
 // ============================================================================
 
+// ignore_for_file: unused_element, unused_field
+
 import 'dart:async';
 
 // MARK: - Enums
@@ -106,7 +108,7 @@ enum PurchaseState {
   purchased('PURCHASED'),
   failed('FAILED'),
   restored('RESTORED'),
-  _deferred('DEFERRED'),
+  deferred('DEFERRED'),
   unknown('UNKNOWN');
 
   const PurchaseState(this.value);
@@ -1088,7 +1090,6 @@ abstract class ReceiptValidationResult {}
 
 /// GraphQL root mutation operations.
 abstract class MutationResolver {
-  Future<bool?> _placeholder();
   /// Acknowledge a non-consumable purchase or subscription
   Future<VoidResult> acknowledgePurchaseAndroid({
     required String purchaseToken,
@@ -1138,7 +1139,6 @@ abstract class MutationResolver {
 
 /// GraphQL root query operations.
 abstract class QueryResolver {
-  Future<bool?> _placeholder();
   /// Get current StoreKit 2 entitlements (iOS 15+)
   Future<List<EntitlementIOS>> currentEntitlementIOS({
     List<String>? skus,
@@ -1193,7 +1193,6 @@ abstract class QueryResolver {
 
 /// GraphQL root subscription operations.
 abstract class SubscriptionResolver {
-  Future<bool?> _placeholder();
   /// Fires when the App Store surfaces a promoted product (iOS only)
   Future<String> promotedProductIOS();
   /// Fires when a purchase fails or is cancelled
