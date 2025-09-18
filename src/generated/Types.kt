@@ -556,6 +556,7 @@ public data class ProductAndroid(
     val price: Double? = null,
     val subscriptionOfferDetailsAndroid: List<ProductSubscriptionAndroidOfferDetails>? = null,
     val title: String,
+    val transactionId: String? = null,
     val type: ProductType
 ) : ProductCommon, Product {
 
@@ -574,6 +575,7 @@ public data class ProductAndroid(
                 price = (json["price"] as Number?)?.toDouble(),
                 subscriptionOfferDetailsAndroid = (json["subscriptionOfferDetailsAndroid"] as List<*>?)?.map { ProductSubscriptionAndroidOfferDetails.fromJson((it as Map<String, Any?>)) },
                 title = json["title"] as String,
+                transactionId = json["transactionId"] as String?,
                 type = ProductType.fromJson(json["type"] as String),
             )
         }
@@ -593,6 +595,7 @@ public data class ProductAndroid(
         "price" to price,
         "subscriptionOfferDetailsAndroid" to subscriptionOfferDetailsAndroid?.map { it.toJson() },
         "title" to title,
+        "transactionId" to transactionId,
         "type" to type.toJson(),
     )
 }

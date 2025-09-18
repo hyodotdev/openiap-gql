@@ -222,6 +222,7 @@ public struct ProductAndroid: Codable, ProductCommon {
     public var price: Double?
     public var subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails]?
     public var title: String
+    public var transactionId: String?
     public var type: ProductType
 }
 

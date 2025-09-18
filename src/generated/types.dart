@@ -843,6 +843,7 @@ class ProductAndroid extends Product implements ProductCommon {
     this.price,
     this.subscriptionOfferDetailsAndroid,
     required this.title,
+    this.transactionId,
     required this.type,
   });
 
@@ -858,6 +859,7 @@ class ProductAndroid extends Product implements ProductCommon {
   final double? price;
   final List<ProductSubscriptionAndroidOfferDetails>? subscriptionOfferDetailsAndroid;
   final String title;
+  final String? transactionId;
   final ProductType type;
 
   factory ProductAndroid.fromJson(Map<String, dynamic> json) {
@@ -874,6 +876,7 @@ class ProductAndroid extends Product implements ProductCommon {
       price: (json['price'] as num?)?.toDouble(),
       subscriptionOfferDetailsAndroid: (json['subscriptionOfferDetailsAndroid'] as List<dynamic>?) == null ? null : (json['subscriptionOfferDetailsAndroid'] as List<dynamic>?)!.map((e) => ProductSubscriptionAndroidOfferDetails.fromJson(e as Map<String, dynamic>)).toList(),
       title: json['title'] as String,
+      transactionId: json['transactionId'] as String?,
       type: ProductType.fromJson(json['type'] as String),
     );
   }
@@ -894,6 +897,7 @@ class ProductAndroid extends Product implements ProductCommon {
       'price': price,
       'subscriptionOfferDetailsAndroid': subscriptionOfferDetailsAndroid == null ? null : subscriptionOfferDetailsAndroid!.map((e) => e.toJson()).toList(),
       'title': title,
+      'transactionId': transactionId,
       'type': type.toJson(),
     };
   }
