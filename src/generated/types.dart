@@ -843,7 +843,6 @@ class ProductAndroid extends Product implements ProductCommon {
     this.price,
     this.subscriptionOfferDetailsAndroid,
     required this.title,
-    this.transactionId,
     required this.type,
   });
 
@@ -859,7 +858,6 @@ class ProductAndroid extends Product implements ProductCommon {
   final double? price;
   final List<ProductSubscriptionAndroidOfferDetails>? subscriptionOfferDetailsAndroid;
   final String title;
-  final String? transactionId;
   final ProductType type;
 
   factory ProductAndroid.fromJson(Map<String, dynamic> json) {
@@ -876,7 +874,6 @@ class ProductAndroid extends Product implements ProductCommon {
       price: (json['price'] as num?)?.toDouble(),
       subscriptionOfferDetailsAndroid: (json['subscriptionOfferDetailsAndroid'] as List<dynamic>?) == null ? null : (json['subscriptionOfferDetailsAndroid'] as List<dynamic>?)!.map((e) => ProductSubscriptionAndroidOfferDetails.fromJson(e as Map<String, dynamic>)).toList(),
       title: json['title'] as String,
-      transactionId: json['transactionId'] as String?,
       type: ProductType.fromJson(json['type'] as String),
     );
   }
@@ -897,7 +894,6 @@ class ProductAndroid extends Product implements ProductCommon {
       'price': price,
       'subscriptionOfferDetailsAndroid': subscriptionOfferDetailsAndroid == null ? null : subscriptionOfferDetailsAndroid!.map((e) => e.toJson()).toList(),
       'title': title,
-      'transactionId': transactionId,
       'type': type.toJson(),
     };
   }
@@ -1246,6 +1242,7 @@ class PurchaseAndroid extends Purchase implements PurchaseCommon {
     required this.quantity,
     this.signatureAndroid,
     required this.transactionDate,
+    this.transactionId,
   });
 
   final bool? autoRenewingAndroid;
@@ -1265,6 +1262,7 @@ class PurchaseAndroid extends Purchase implements PurchaseCommon {
   final int quantity;
   final String? signatureAndroid;
   final double transactionDate;
+  final String? transactionId;
 
   factory PurchaseAndroid.fromJson(Map<String, dynamic> json) {
     return PurchaseAndroid(
@@ -1285,6 +1283,7 @@ class PurchaseAndroid extends Purchase implements PurchaseCommon {
       quantity: json['quantity'] as int,
       signatureAndroid: json['signatureAndroid'] as String?,
       transactionDate: (json['transactionDate'] as num).toDouble(),
+      transactionId: json['transactionId'] as String?,
     );
   }
 
@@ -1309,6 +1308,7 @@ class PurchaseAndroid extends Purchase implements PurchaseCommon {
       'quantity': quantity,
       'signatureAndroid': signatureAndroid,
       'transactionDate': transactionDate,
+      'transactionId': transactionId,
     };
   }
 }
@@ -1372,6 +1372,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
     this.storefrontCountryCodeIOS,
     this.subscriptionGroupIdIOS,
     required this.transactionDate,
+    required this.transactionId,
     this.transactionReasonIOS,
     this.webOrderLineItemIdIOS,
   });
@@ -1404,6 +1405,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
   final String? storefrontCountryCodeIOS;
   final String? subscriptionGroupIdIOS;
   final double transactionDate;
+  final String transactionId;
   final String? transactionReasonIOS;
   final String? webOrderLineItemIdIOS;
 
@@ -1437,6 +1439,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
       storefrontCountryCodeIOS: json['storefrontCountryCodeIOS'] as String?,
       subscriptionGroupIdIOS: json['subscriptionGroupIdIOS'] as String?,
       transactionDate: (json['transactionDate'] as num).toDouble(),
+      transactionId: json['transactionId'] as String,
       transactionReasonIOS: json['transactionReasonIOS'] as String?,
       webOrderLineItemIdIOS: json['webOrderLineItemIdIOS'] as String?,
     );
@@ -1474,6 +1477,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
       'storefrontCountryCodeIOS': storefrontCountryCodeIOS,
       'subscriptionGroupIdIOS': subscriptionGroupIdIOS,
       'transactionDate': transactionDate,
+      'transactionId': transactionId,
       'transactionReasonIOS': transactionReasonIOS,
       'webOrderLineItemIdIOS': webOrderLineItemIdIOS,
     };

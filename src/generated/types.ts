@@ -226,7 +226,6 @@ export interface ProductAndroid extends ProductCommon {
   price?: (number | null);
   subscriptionOfferDetailsAndroid?: (ProductSubscriptionAndroidOfferDetails[] | null);
   title: string;
-  transactionId?: (string | null);
   type: ProductType;
 }
 
@@ -350,6 +349,7 @@ export interface PurchaseAndroid extends PurchaseCommon {
   quantity: number;
   signatureAndroid?: (string | null);
   transactionDate: number;
+  transactionId?: (string | null);
 }
 
 export interface PurchaseCommon {
@@ -400,6 +400,7 @@ export interface PurchaseIOS extends PurchaseCommon {
   storefrontCountryCodeIOS?: (string | null);
   subscriptionGroupIdIOS?: (string | null);
   transactionDate: number;
+  transactionId: string;
   transactionReasonIOS?: (string | null);
   webOrderLineItemIdIOS?: (string | null);
 }

@@ -42,7 +42,6 @@ type ProductAndroid implements ProductCommon {
   platform: IapPlatform!
 
   # Android-specific
-  transactionId: String # Optional in Android unlike iOS
   nameAndroid: String!
   oneTimePurchaseOfferDetailsAndroid: ProductAndroidOneTimePurchaseOfferDetail
   subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails!]
@@ -72,6 +71,7 @@ type PurchaseAndroid implements PurchaseCommon {
   id: ID!
   productId: String!
   ids: [String!]
+  transactionId: String # Optional in Android unlike iOS
   transactionDate: Float!
   purchaseToken: String
   platform: IapPlatform!

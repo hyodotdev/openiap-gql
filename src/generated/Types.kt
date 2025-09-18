@@ -556,7 +556,6 @@ public data class ProductAndroid(
     val price: Double? = null,
     val subscriptionOfferDetailsAndroid: List<ProductSubscriptionAndroidOfferDetails>? = null,
     val title: String,
-    val transactionId: String? = null,
     val type: ProductType
 ) : ProductCommon, Product {
 
@@ -575,7 +574,6 @@ public data class ProductAndroid(
                 price = (json["price"] as Number?)?.toDouble(),
                 subscriptionOfferDetailsAndroid = (json["subscriptionOfferDetailsAndroid"] as List<*>?)?.map { ProductSubscriptionAndroidOfferDetails.fromJson((it as Map<String, Any?>)) },
                 title = json["title"] as String,
-                transactionId = json["transactionId"] as String?,
                 type = ProductType.fromJson(json["type"] as String),
             )
         }
@@ -595,7 +593,6 @@ public data class ProductAndroid(
         "price" to price,
         "subscriptionOfferDetailsAndroid" to subscriptionOfferDetailsAndroid?.map { it.toJson() },
         "title" to title,
-        "transactionId" to transactionId,
         "type" to type.toJson(),
     )
 }
@@ -869,7 +866,8 @@ public data class PurchaseAndroid(
     val purchaseToken: String? = null,
     val quantity: Int,
     val signatureAndroid: String? = null,
-    val transactionDate: Double
+    val transactionDate: Double,
+    val transactionId: String? = null
 ) : PurchaseCommon, Purchase {
 
     companion object {
@@ -892,6 +890,7 @@ public data class PurchaseAndroid(
                 quantity = (json["quantity"] as Number).toInt(),
                 signatureAndroid = json["signatureAndroid"] as String?,
                 transactionDate = (json["transactionDate"] as Number).toDouble(),
+                transactionId = json["transactionId"] as String?,
             )
         }
     }
@@ -915,6 +914,7 @@ public data class PurchaseAndroid(
         "quantity" to quantity,
         "signatureAndroid" to signatureAndroid,
         "transactionDate" to transactionDate,
+        "transactionId" to transactionId,
     )
 }
 
@@ -971,6 +971,7 @@ public data class PurchaseIOS(
     val storefrontCountryCodeIOS: String? = null,
     val subscriptionGroupIdIOS: String? = null,
     val transactionDate: Double,
+    val transactionId: String,
     val transactionReasonIOS: String? = null,
     val webOrderLineItemIdIOS: String? = null
 ) : PurchaseCommon, Purchase {
@@ -1006,6 +1007,7 @@ public data class PurchaseIOS(
                 storefrontCountryCodeIOS = json["storefrontCountryCodeIOS"] as String?,
                 subscriptionGroupIdIOS = json["subscriptionGroupIdIOS"] as String?,
                 transactionDate = (json["transactionDate"] as Number).toDouble(),
+                transactionId = json["transactionId"] as String,
                 transactionReasonIOS = json["transactionReasonIOS"] as String?,
                 webOrderLineItemIdIOS = json["webOrderLineItemIdIOS"] as String?,
             )
@@ -1042,6 +1044,7 @@ public data class PurchaseIOS(
         "storefrontCountryCodeIOS" to storefrontCountryCodeIOS,
         "subscriptionGroupIdIOS" to subscriptionGroupIdIOS,
         "transactionDate" to transactionDate,
+        "transactionId" to transactionId,
         "transactionReasonIOS" to transactionReasonIOS,
         "webOrderLineItemIdIOS" to webOrderLineItemIdIOS,
     )

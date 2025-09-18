@@ -222,7 +222,6 @@ public struct ProductAndroid: Codable, ProductCommon {
     public var price: Double?
     public var subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails]?
     public var title: String
-    public var transactionId: String?
     public var type: ProductType
 }
 
@@ -318,6 +317,7 @@ public struct PurchaseAndroid: Codable, PurchaseCommon {
     public var quantity: Int
     public var signatureAndroid: String?
     public var transactionDate: Double
+    public var transactionId: String?
 }
 
 public struct PurchaseError: Codable {
@@ -355,6 +355,7 @@ public struct PurchaseIOS: Codable, PurchaseCommon {
     public var storefrontCountryCodeIOS: String?
     public var subscriptionGroupIdIOS: String?
     public var transactionDate: Double
+    public var transactionId: String
     public var transactionReasonIOS: String?
     public var webOrderLineItemIdIOS: String?
 }

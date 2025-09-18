@@ -134,6 +134,7 @@ type PurchaseIOS implements PurchaseCommon {
   isAutoRenewing: Boolean!
 
   # iOS-specific fields
+  transactionId: String!
   quantityIOS: Int
   originalTransactionDateIOS: Float
   originalTransactionIdentifierIOS: String
