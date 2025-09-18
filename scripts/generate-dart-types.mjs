@@ -608,6 +608,50 @@ const printOperationInterface = (operationType) => {
   lines.push('}', '');
 };
 
+const printOperationHelpers = (operationType) => {
+  const rootName = operationType.name;
+  const fields = Object.values(operationType.getFields())
+    .filter((field) => field.name !== '_placeholder')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (fields.length === 0) return;
+
+  lines.push(`// MARK: - ${rootName} Helpers`, '');
+
+  fields.forEach((field) => {
+    const pascalField = toPascalCase(field.name);
+    const aliasName = `${rootName}${pascalField}Handler`;
+    const { type, nullable } = getDartType(field.type);
+    const returnType = `${type}${nullable ? '?' : ''}`;
+    if (field.args.length === 0) {
+      lines.push(`typedef ${aliasName} = Future<${returnType}> Function();`);
+      return;
+    }
+    lines.push(`typedef ${aliasName} = Future<${returnType}> Function({`);
+    field.args.forEach((arg) => {
+      const { type: argType, nullable: argNullable } = getDartType(arg.type);
+      const finalType = `${argType}${argNullable ? '?' : ''}`;
+      const prefix = argNullable ? '' : 'required ';
+      lines.push(`  ${prefix}${finalType} ${escapeDartName(arg.name)},`);
+    });
+    lines.push('});');
+  });
+
+  const helperClass = `${rootName}Handlers`;
+  lines.push('', `class ${helperClass} {`);
+  lines.push(`  const ${helperClass}({`);
+  fields.forEach((field) => {
+    lines.push(`    this.${escapeDartName(field.name)},`);
+  });
+  lines.push('  });', '');
+  fields.forEach((field) => {
+    const pascalField = toPascalCase(field.name);
+    const aliasName = `${rootName}${pascalField}Handler`;
+    const propertyName = escapeDartName(field.name);
+    lines.push(`  final ${aliasName}? ${propertyName};`);
+  });
+  lines.push('}', '');
+};
+
 if (enums.length) {
   lines.push('// MARK: - Enums', '');
   enums.sort((a, b) => a.name.localeCompare(b.name)).forEach(printEnum);
@@ -636,6 +680,11 @@ if (unions.length) {
 if (operationTypes.length) {
   lines.push('// MARK: - Root Operations', '');
   operationTypes.sort((a, b) => a.name.localeCompare(b.name)).forEach(printOperationInterface);
+}
+
+if (operationTypes.length) {
+  lines.push('// MARK: - Root Operation Helpers', '');
+  operationTypes.sort((a, b) => a.name.localeCompare(b.name)).forEach(printOperationHelpers);
 }
 
 const outputPath = resolve(__dirname, '../src/generated/types.dart');
