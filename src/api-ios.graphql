@@ -17,20 +17,20 @@ extend type Query {
   # Future
   getPendingTransactionsIOS: [PurchaseIOS!]!
   """
-  Check introductory offer eligibility for specific products
+  Check introductory offer eligibility for a subscription group
   """
   # Future
-  isEligibleForIntroOfferIOS(productIds: [String!]!): Boolean!
+  isEligibleForIntroOfferIOS(groupID: String!): Boolean!
   """
   Get StoreKit 2 subscription status details (iOS 15+)
   """
   # Future
-  subscriptionStatusIOS(skus: [String!]): [SubscriptionStatusIOS!]!
+  subscriptionStatusIOS(sku: String!): [SubscriptionStatusIOS!]!
   """
   Get current StoreKit 2 entitlements (iOS 15+)
   """
   # Future
-  currentEntitlementIOS(skus: [String!]): [EntitlementIOS!]!
+  currentEntitlementIOS(sku: String!): PurchaseIOS
   """
   Get the latest transaction for a product using StoreKit 2
   """
@@ -40,22 +40,27 @@ extend type Query {
   Verify a StoreKit 2 transaction signature
   """
   # Future
-  isTransactionVerifiedIOS(transactionId: String!): Boolean!
+  isTransactionVerifiedIOS(sku: String!): Boolean!
   """
   Get the transaction JWS (StoreKit 2)
   """
   # Future
-  getTransactionJwsIOS(transactionId: String!): String!
+  getTransactionJwsIOS(sku: String!): String
   """
   Get base64-encoded receipt data for validation
   """
   # Future
-  getReceiptDataIOS: String!
+  getReceiptDataIOS: String
   """
   Fetch the current app transaction (iOS 16+)
   """
   # Future
   getAppTransactionIOS: AppTransaction
+  """
+  Validate a receipt for a specific product
+  """
+  # Future
+  validateReceiptIOS(options: ReceiptValidationProps!): ReceiptValidationResultIOS!
 }
 
 extend type Mutation {
@@ -63,12 +68,12 @@ extend type Mutation {
   Clear pending transactions from the StoreKit payment queue
   """
   # Future
-  clearTransactionIOS: VoidResult!
+  clearTransactionIOS: Boolean!
   """
   Purchase the promoted product surfaced by the App Store
   """
   # Future
-  requestPurchaseOnPromotedProductIOS: PurchaseIOS!
+  requestPurchaseOnPromotedProductIOS: Boolean!
   """
   Open subscription management UI and return changed purchases (iOS 15+)
   """
@@ -78,15 +83,15 @@ extend type Mutation {
   Initiate a refund request for a product (iOS 15+)
   """
   # Future
-  beginRefundRequestIOS(sku: String!): RefundResultIOS!
+  beginRefundRequestIOS(sku: String!): String
   """
   Force a StoreKit sync for transactions (iOS 15+)
   """
   # Future
-  syncIOS: VoidResult!
+  syncIOS: Boolean!
   """
   Present the App Store code redemption sheet
   """
   # Future
-  presentCodeRedemptionSheetIOS: VoidResult!
+  presentCodeRedemptionSheetIOS: Boolean!
 }

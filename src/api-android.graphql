@@ -5,10 +5,10 @@ extend type Mutation {
   Acknowledge a non-consumable purchase or subscription
   """
   # Future
-  acknowledgePurchaseAndroid(purchaseToken: String!): VoidResult!
+  acknowledgePurchaseAndroid(purchaseToken: String!): Boolean!
   """
   Consume a purchase token so it can be repurchased
   """
   # Future
-  consumePurchaseAndroid(purchaseToken: String!): VoidResult!
+  consumePurchaseAndroid(purchaseToken: String!): Boolean!
 }

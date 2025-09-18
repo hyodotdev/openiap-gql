@@ -1938,19 +1938,19 @@ public interface MutationResolver {
     /**
      * Acknowledge a non-consumable purchase or subscription
      */
-    suspend fun acknowledgePurchaseAndroid(purchaseToken: String): VoidResult
+    suspend fun acknowledgePurchaseAndroid(purchaseToken: String): Boolean
     /**
      * Initiate a refund request for a product (iOS 15+)
      */
-    suspend fun beginRefundRequestIOS(sku: String): RefundResultIOS
+    suspend fun beginRefundRequestIOS(sku: String): String?
     /**
      * Clear pending transactions from the StoreKit payment queue
      */
-    suspend fun clearTransactionIOS(): VoidResult
+    suspend fun clearTransactionIOS(): Boolean
     /**
      * Consume a purchase token so it can be repurchased
      */
-    suspend fun consumePurchaseAndroid(purchaseToken: String): VoidResult
+    suspend fun consumePurchaseAndroid(purchaseToken: String): Boolean
     /**
      * Open the native subscription management surface
      */
@@ -1970,7 +1970,7 @@ public interface MutationResolver {
     /**
      * Present the App Store code redemption sheet
      */
-    suspend fun presentCodeRedemptionSheetIOS(): VoidResult
+    suspend fun presentCodeRedemptionSheetIOS(): Boolean
     /**
      * Initiate a purchase flow; rely on events for final state
      */
@@ -1978,7 +1978,7 @@ public interface MutationResolver {
     /**
      * Purchase the promoted product surfaced by the App Store
      */
-    suspend fun requestPurchaseOnPromotedProductIOS(): PurchaseIOS
+    suspend fun requestPurchaseOnPromotedProductIOS(): Boolean
     /**
      * Restore completed purchases across platforms
      */
@@ -1990,7 +1990,7 @@ public interface MutationResolver {
     /**
      * Force a StoreKit sync for transactions (iOS 15+)
      */
-    suspend fun syncIOS(): VoidResult
+    suspend fun syncIOS(): Boolean
     /**
      * Validate purchase receipts with the configured providers
      */
@@ -2004,7 +2004,7 @@ public interface QueryResolver {
     /**
      * Get current StoreKit 2 entitlements (iOS 15+)
      */
-    suspend fun currentEntitlementIOS(skus: List<String>? = null): List<EntitlementIOS>
+    suspend fun currentEntitlementIOS(sku: String): PurchaseIOS?
     /**
      * Retrieve products or subscriptions from the store
      */
@@ -2032,7 +2032,7 @@ public interface QueryResolver {
     /**
      * Get base64-encoded receipt data for validation
      */
-    suspend fun getReceiptDataIOS(): String
+    suspend fun getReceiptDataIOS(): String?
     /**
      * Get the current App Store storefront country code
      */
@@ -2040,19 +2040,19 @@ public interface QueryResolver {
     /**
      * Get the transaction JWS (StoreKit 2)
      */
-    suspend fun getTransactionJwsIOS(transactionId: String): String
+    suspend fun getTransactionJwsIOS(sku: String): String?
     /**
      * Check whether the user has active subscriptions
      */
     suspend fun hasActiveSubscriptions(subscriptionIds: List<String>? = null): Boolean
     /**
-     * Check introductory offer eligibility for specific products
+     * Check introductory offer eligibility for a subscription group
      */
-    suspend fun isEligibleForIntroOfferIOS(productIds: List<String>): Boolean
+    suspend fun isEligibleForIntroOfferIOS(groupID: String): Boolean
     /**
      * Verify a StoreKit 2 transaction signature
      */
-    suspend fun isTransactionVerifiedIOS(transactionId: String): Boolean
+    suspend fun isTransactionVerifiedIOS(sku: String): Boolean
     /**
      * Get the latest transaction for a product using StoreKit 2
      */
@@ -2060,7 +2060,11 @@ public interface QueryResolver {
     /**
      * Get StoreKit 2 subscription status details (iOS 15+)
      */
-    suspend fun subscriptionStatusIOS(skus: List<String>? = null): List<SubscriptionStatusIOS>
+    suspend fun subscriptionStatusIOS(sku: String): List<SubscriptionStatusIOS>
+    /**
+     * Validate a receipt for a specific product
+     */
+    suspend fun validateReceiptIOS(options: ReceiptValidationProps): ReceiptValidationResultIOS
 }
 
 /**
@@ -2085,20 +2089,20 @@ public interface SubscriptionResolver {
 
 // MARK: - Mutation Helpers
 
-public typealias MutationAcknowledgePurchaseAndroidHandler = suspend (purchaseToken: String) -> VoidResult
-public typealias MutationBeginRefundRequestIOSHandler = suspend (sku: String) -> RefundResultIOS
-public typealias MutationClearTransactionIOSHandler = suspend () -> VoidResult
-public typealias MutationConsumePurchaseAndroidHandler = suspend (purchaseToken: String) -> VoidResult
+public typealias MutationAcknowledgePurchaseAndroidHandler = suspend (purchaseToken: String) -> Boolean
+public typealias MutationBeginRefundRequestIOSHandler = suspend (sku: String) -> String?
+public typealias MutationClearTransactionIOSHandler = suspend () -> Boolean
+public typealias MutationConsumePurchaseAndroidHandler = suspend (purchaseToken: String) -> Boolean
 public typealias MutationDeepLinkToSubscriptionsHandler = suspend (options: DeepLinkOptions?) -> VoidResult
 public typealias MutationEndConnectionHandler = suspend () -> Boolean
 public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> VoidResult
 public typealias MutationInitConnectionHandler = suspend () -> Boolean
-public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> VoidResult
+public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> Boolean
 public typealias MutationRequestPurchaseHandler = suspend (params: RequestPurchaseProps) -> RequestPurchaseResult?
-public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> PurchaseIOS
+public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> Boolean
 public typealias MutationRestorePurchasesHandler = suspend () -> VoidResult
 public typealias MutationShowManageSubscriptionsIOSHandler = suspend () -> List<PurchaseIOS>
-public typealias MutationSyncIOSHandler = suspend () -> VoidResult
+public typealias MutationSyncIOSHandler = suspend () -> Boolean
 public typealias MutationValidateReceiptHandler = suspend (options: ReceiptValidationProps) -> ReceiptValidationResult
 
 public data class MutationHandlers(
@@ -2121,21 +2125,22 @@ public data class MutationHandlers(
 
 // MARK: - Query Helpers
 
-public typealias QueryCurrentEntitlementIOSHandler = suspend (skus: List<String>?) -> List<EntitlementIOS>
+public typealias QueryCurrentEntitlementIOSHandler = suspend (sku: String) -> PurchaseIOS?
 public typealias QueryFetchProductsHandler = suspend (params: ProductRequest) -> FetchProductsResult
 public typealias QueryGetActiveSubscriptionsHandler = suspend (subscriptionIds: List<String>?) -> List<ActiveSubscription>
 public typealias QueryGetAppTransactionIOSHandler = suspend () -> AppTransaction?
 public typealias QueryGetAvailablePurchasesHandler = suspend (options: PurchaseOptions?) -> List<Purchase>
 public typealias QueryGetPendingTransactionsIOSHandler = suspend () -> List<PurchaseIOS>
 public typealias QueryGetPromotedProductIOSHandler = suspend () -> ProductIOS?
-public typealias QueryGetReceiptDataIOSHandler = suspend () -> String
+public typealias QueryGetReceiptDataIOSHandler = suspend () -> String?
 public typealias QueryGetStorefrontIOSHandler = suspend () -> String
-public typealias QueryGetTransactionJwsIOSHandler = suspend (transactionId: String) -> String
+public typealias QueryGetTransactionJwsIOSHandler = suspend (sku: String) -> String?
 public typealias QueryHasActiveSubscriptionsHandler = suspend (subscriptionIds: List<String>?) -> Boolean
-public typealias QueryIsEligibleForIntroOfferIOSHandler = suspend (productIds: List<String>) -> Boolean
-public typealias QueryIsTransactionVerifiedIOSHandler = suspend (transactionId: String) -> Boolean
+public typealias QueryIsEligibleForIntroOfferIOSHandler = suspend (groupID: String) -> Boolean
+public typealias QueryIsTransactionVerifiedIOSHandler = suspend (sku: String) -> Boolean
 public typealias QueryLatestTransactionIOSHandler = suspend (sku: String) -> PurchaseIOS?
-public typealias QuerySubscriptionStatusIOSHandler = suspend (skus: List<String>?) -> List<SubscriptionStatusIOS>
+public typealias QuerySubscriptionStatusIOSHandler = suspend (sku: String) -> List<SubscriptionStatusIOS>
+public typealias QueryValidateReceiptIOSHandler = suspend (options: ReceiptValidationProps) -> ReceiptValidationResultIOS
 
 public data class QueryHandlers(
     val currentEntitlementIOS: QueryCurrentEntitlementIOSHandler? = null,
@@ -2152,7 +2157,8 @@ public data class QueryHandlers(
     val isEligibleForIntroOfferIOS: QueryIsEligibleForIntroOfferIOSHandler? = null,
     val isTransactionVerifiedIOS: QueryIsTransactionVerifiedIOSHandler? = null,
     val latestTransactionIOS: QueryLatestTransactionIOSHandler? = null,
-    val subscriptionStatusIOS: QuerySubscriptionStatusIOSHandler? = null
+    val subscriptionStatusIOS: QuerySubscriptionStatusIOSHandler? = null,
+    val validateReceiptIOS: QueryValidateReceiptIOSHandler? = null
 )
 
 // MARK: - Subscription Helpers
