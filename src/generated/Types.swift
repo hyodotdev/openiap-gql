@@ -927,49 +927,49 @@ public enum ReceiptValidationResult: Codable {
 /// GraphQL root mutation operations.
 public protocol MutationResolver {
     /// Acknowledge a non-consumable purchase or subscription
-    func acknowledgePurchaseAndroid(purchaseToken: String) async throws -> Bool
+    func acknowledgePurchaseAndroid(_ purchaseToken: String) async throws -> Bool
     /// Initiate a refund request for a product (iOS 15+)
-    func beginRefundRequestIOS(sku: String) async throws -> String?
+    func beginRefundRequestIOS(_ sku: String) async throws -> String?
     /// Clear pending transactions from the StoreKit payment queue
     func clearTransactionIOS() async throws -> Bool
     /// Consume a purchase token so it can be repurchased
-    func consumePurchaseAndroid(purchaseToken: String) async throws -> Bool
+    func consumePurchaseAndroid(_ purchaseToken: String) async throws -> Bool
     /// Open the native subscription management surface
-    func deepLinkToSubscriptions(options: DeepLinkOptions? = nil) async throws -> VoidResult
+    func deepLinkToSubscriptions(_ options: DeepLinkOptions? = nil) async throws -> Bool
     /// Close the platform billing connection
     func endConnection() async throws -> Bool
     /// Finish a transaction after validating receipts
-    func finishTransaction(purchase: PurchaseInput, isConsumable: Bool? = nil) async throws -> VoidResult
+    func finishTransaction(purchase: PurchaseInput, isConsumable: Bool? = nil) async throws -> Bool
     /// Establish the platform billing connection
     func initConnection() async throws -> Bool
     /// Present the App Store code redemption sheet
     func presentCodeRedemptionSheetIOS() async throws -> Bool
     /// Initiate a purchase flow; rely on events for final state
-    func requestPurchase(params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
+    func requestPurchase(_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
     /// Purchase the promoted product surfaced by the App Store
     func requestPurchaseOnPromotedProductIOS() async throws -> Bool
     /// Restore completed purchases across platforms
-    func restorePurchases() async throws -> VoidResult
+    func restorePurchases() async throws -> Bool
     /// Open subscription management UI and return changed purchases (iOS 15+)
     func showManageSubscriptionsIOS() async throws -> [PurchaseIOS]
     /// Force a StoreKit sync for transactions (iOS 15+)
     func syncIOS() async throws -> Bool
     /// Validate purchase receipts with the configured providers
-    func validateReceipt(options: ReceiptValidationProps) async throws -> ReceiptValidationResult
+    func validateReceipt(_ options: ReceiptValidationProps) async throws -> ReceiptValidationResult
 }
 
 /// GraphQL root query operations.
 public protocol QueryResolver {
     /// Get current StoreKit 2 entitlements (iOS 15+)
-    func currentEntitlementIOS(sku: String) async throws -> PurchaseIOS?
+    func currentEntitlementIOS(_ sku: String) async throws -> PurchaseIOS?
     /// Retrieve products or subscriptions from the store
-    func fetchProducts(params: ProductRequest) async throws -> FetchProductsResult
+    func fetchProducts(_ params: ProductRequest) async throws -> FetchProductsResult
     /// Get active subscriptions (filters by subscriptionIds when provided)
-    func getActiveSubscriptions(subscriptionIds: [String]? = nil) async throws -> [ActiveSubscription]
+    func getActiveSubscriptions(_ subscriptionIds: [String]? = nil) async throws -> [ActiveSubscription]
     /// Fetch the current app transaction (iOS 16+)
     func getAppTransactionIOS() async throws -> AppTransaction?
     /// Get all available purchases for the current user
-    func getAvailablePurchases(options: PurchaseOptions? = nil) async throws -> [Purchase]
+    func getAvailablePurchases(_ options: PurchaseOptions? = nil) async throws -> [Purchase]
     /// Retrieve all pending transactions in the StoreKit queue
     func getPendingTransactionsIOS() async throws -> [PurchaseIOS]
     /// Get the currently promoted product (iOS 11+)
@@ -979,19 +979,19 @@ public protocol QueryResolver {
     /// Get the current App Store storefront country code
     func getStorefrontIOS() async throws -> String
     /// Get the transaction JWS (StoreKit 2)
-    func getTransactionJwsIOS(sku: String) async throws -> String?
+    func getTransactionJwsIOS(_ sku: String) async throws -> String?
     /// Check whether the user has active subscriptions
-    func hasActiveSubscriptions(subscriptionIds: [String]? = nil) async throws -> Bool
+    func hasActiveSubscriptions(_ subscriptionIds: [String]? = nil) async throws -> Bool
     /// Check introductory offer eligibility for a subscription group
-    func isEligibleForIntroOfferIOS(groupID: String) async throws -> Bool
+    func isEligibleForIntroOfferIOS(_ groupID: String) async throws -> Bool
     /// Verify a StoreKit 2 transaction signature
-    func isTransactionVerifiedIOS(sku: String) async throws -> Bool
+    func isTransactionVerifiedIOS(_ sku: String) async throws -> Bool
     /// Get the latest transaction for a product using StoreKit 2
-    func latestTransactionIOS(sku: String) async throws -> PurchaseIOS?
+    func latestTransactionIOS(_ sku: String) async throws -> PurchaseIOS?
     /// Get StoreKit 2 subscription status details (iOS 15+)
-    func subscriptionStatusIOS(sku: String) async throws -> [SubscriptionStatusIOS]
+    func subscriptionStatusIOS(_ sku: String) async throws -> [SubscriptionStatusIOS]
     /// Validate a receipt for a specific product
-    func validateReceiptIOS(options: ReceiptValidationProps) async throws -> ReceiptValidationResultIOS
+    func validateReceiptIOS(_ options: ReceiptValidationProps) async throws -> ReceiptValidationResultIOS
 }
 
 /// GraphQL root subscription operations.
@@ -1012,14 +1012,14 @@ public typealias MutationAcknowledgePurchaseAndroidHandler = (_ purchaseToken: S
 public typealias MutationBeginRefundRequestIOSHandler = (_ sku: String) async throws -> String?
 public typealias MutationClearTransactionIOSHandler = () async throws -> Bool
 public typealias MutationConsumePurchaseAndroidHandler = (_ purchaseToken: String) async throws -> Bool
-public typealias MutationDeepLinkToSubscriptionsHandler = (_ options: DeepLinkOptions?) async throws -> VoidResult
+public typealias MutationDeepLinkToSubscriptionsHandler = (_ options: DeepLinkOptions?) async throws -> Bool
 public typealias MutationEndConnectionHandler = () async throws -> Bool
-public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, _ isConsumable: Bool?) async throws -> VoidResult
+public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, _ isConsumable: Bool?) async throws -> Bool
 public typealias MutationInitConnectionHandler = () async throws -> Bool
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = () async throws -> Bool
 public typealias MutationRequestPurchaseHandler = (_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = () async throws -> Bool
-public typealias MutationRestorePurchasesHandler = () async throws -> VoidResult
+public typealias MutationRestorePurchasesHandler = () async throws -> Bool
 public typealias MutationShowManageSubscriptionsIOSHandler = () async throws -> [PurchaseIOS]
 public typealias MutationSyncIOSHandler = () async throws -> Bool
 public typealias MutationValidateReceiptHandler = (_ options: ReceiptValidationProps) async throws -> ReceiptValidationResult

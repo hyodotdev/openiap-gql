@@ -169,24 +169,17 @@ export interface Mutation {
 }
 
 
-export interface MutationAcknowledgePurchaseAndroidArgs {
-  purchaseToken: string;
-}
+
+export type MutationAcknowledgePurchaseAndroidArgs = string;
 
 
-export interface MutationBeginRefundRequestIosArgs {
-  sku: string;
-}
+export type MutationBeginRefundRequestIosArgs = string;
 
 
-export interface MutationConsumePurchaseAndroidArgs {
-  purchaseToken: string;
-}
+export type MutationConsumePurchaseAndroidArgs = string;
 
 
-export interface MutationDeepLinkToSubscriptionsArgs {
-  options?: (DeepLinkOptions | null);
-}
+export type MutationDeepLinkToSubscriptionsArgs = (DeepLinkOptions | null) | undefined;
 
 
 export interface MutationFinishTransactionArgs {
@@ -195,14 +188,20 @@ export interface MutationFinishTransactionArgs {
 }
 
 
-export interface MutationRequestPurchaseArgs {
-  params: RequestPurchaseProps;
-}
+export type MutationRequestPurchaseArgs =
+  | {
+      /** Per-platform purchase request props */
+      request: RequestPurchasePropsByPlatforms;
+      type: 'in-app';
+    }
+  | {
+      /** Per-platform subscription request props */
+      request: RequestSubscriptionPropsByPlatforms;
+      type: 'subs';
+    };
 
 
-export interface MutationValidateReceiptArgs {
-  options: ReceiptValidationProps;
-}
+export type MutationValidateReceiptArgs = ReceiptValidationProps;
 
 export type PaymentModeIOS = 'empty' | 'free-trial' | 'pay-as-you-go' | 'pay-up-front';
 
@@ -474,59 +473,38 @@ export interface Query {
 }
 
 
-export interface QueryCurrentEntitlementIosArgs {
-  sku: string;
-}
+
+export type QueryCurrentEntitlementIosArgs = string;
 
 
-export interface QueryFetchProductsArgs {
-  params: ProductRequest;
-}
+export type QueryFetchProductsArgs = ProductRequest;
 
 
-export interface QueryGetActiveSubscriptionsArgs {
-  subscriptionIds?: (string[] | null);
-}
+export type QueryGetActiveSubscriptionsArgs = (string[] | null) | undefined;
 
 
-export interface QueryGetAvailablePurchasesArgs {
-  options?: (PurchaseOptions | null);
-}
+export type QueryGetAvailablePurchasesArgs = (PurchaseOptions | null) | undefined;
 
 
-export interface QueryGetTransactionJwsIosArgs {
-  sku: string;
-}
+export type QueryGetTransactionJwsIosArgs = string;
 
 
-export interface QueryHasActiveSubscriptionsArgs {
-  subscriptionIds?: (string[] | null);
-}
+export type QueryHasActiveSubscriptionsArgs = (string[] | null) | undefined;
 
 
-export interface QueryIsEligibleForIntroOfferIosArgs {
-  groupID: string;
-}
+export type QueryIsEligibleForIntroOfferIosArgs = string;
 
 
-export interface QueryIsTransactionVerifiedIosArgs {
-  sku: string;
-}
+export type QueryIsTransactionVerifiedIosArgs = string;
 
 
-export interface QueryLatestTransactionIosArgs {
-  sku: string;
-}
+export type QueryLatestTransactionIosArgs = string;
 
 
-export interface QuerySubscriptionStatusIosArgs {
-  sku: string;
-}
+export type QuerySubscriptionStatusIosArgs = string;
 
 
-export interface QueryValidateReceiptIosArgs {
-  options: ReceiptValidationProps;
-}
+export type QueryValidateReceiptIosArgs = ReceiptValidationProps;
 
 export interface ReceiptValidationAndroidOptions {
   accessToken: string;
@@ -676,6 +654,7 @@ export interface Subscription {
   purchaseUpdated: Purchase;
 }
 
+
 export interface SubscriptionInfoIOS {
   introductoryOffer?: (SubscriptionOfferIOS | null);
   promotionalOffers?: (SubscriptionOfferIOS[] | null);
@@ -733,7 +712,9 @@ export type QueryArgsMap = {
 export type QueryField<K extends keyof Query> =
   QueryArgsMap[K] extends never
     ? () => NonNullable<Query[K]>
-    : (args: QueryArgsMap[K]) => NonNullable<Query[K]>;
+    : undefined extends QueryArgsMap[K]
+      ? (args?: QueryArgsMap[K]) => NonNullable<Query[K]>
+      : (args: QueryArgsMap[K]) => NonNullable<Query[K]>;
 
 export type QueryFieldMap = {
   [K in keyof Query]?: QueryField<K>;
@@ -762,7 +743,9 @@ export type MutationArgsMap = {
 export type MutationField<K extends keyof Mutation> =
   MutationArgsMap[K] extends never
     ? () => NonNullable<Mutation[K]>
-    : (args: MutationArgsMap[K]) => NonNullable<Mutation[K]>;
+    : undefined extends MutationArgsMap[K]
+      ? (args?: MutationArgsMap[K]) => NonNullable<Mutation[K]>
+      : (args: MutationArgsMap[K]) => NonNullable<Mutation[K]>;
 
 export type MutationFieldMap = {
   [K in keyof Mutation]?: MutationField<K>;
@@ -779,7 +762,9 @@ export type SubscriptionArgsMap = {
 export type SubscriptionField<K extends keyof Subscription> =
   SubscriptionArgsMap[K] extends never
     ? () => NonNullable<Subscription[K]>
-    : (args: SubscriptionArgsMap[K]) => NonNullable<Subscription[K]>;
+    : undefined extends SubscriptionArgsMap[K]
+      ? (args?: SubscriptionArgsMap[K]) => NonNullable<Subscription[K]>
+      : (args: SubscriptionArgsMap[K]) => NonNullable<Subscription[K]>;
 
 export type SubscriptionFieldMap = {
   [K in keyof Subscription]?: SubscriptionField<K>;

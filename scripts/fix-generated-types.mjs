@@ -185,6 +185,132 @@ content = content.replace(
   ].join('\n'),
 );
 
+content = content.replace(
+  /export interface MutationRequestPurchaseArgs \{[\s\S]*?\}\n\n/,
+  [
+    'export type MutationRequestPurchaseArgs =',
+    '  | {',
+    '      /** Per-platform purchase request props */',
+    '      request: RequestPurchasePropsByPlatforms;',
+    "      type: 'in-app';",
+    '    }',
+    '  | {',
+    '      /** Per-platform subscription request props */',
+    '      request: RequestSubscriptionPropsByPlatforms;',
+    "      type: 'subs';",
+    '    };\n\n',
+  ].join('\n'),
+);
+
+const needsParentheses = (value) => {
+  const trimmed = value.trim();
+  if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    let depth = 0;
+    for (let i = 0; i < trimmed.length; i += 1) {
+      const ch = trimmed[i];
+      if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+      if (depth === 0 && i < trimmed.length - 1) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return /[|&]/.test(trimmed);
+};
+
+const singleFieldInterfaceTypes = new Map();
+const interfacePattern = /export interface (\w+) \{\n([\s\S]*?)\n\}\n/g;
+let interfaceMatch;
+while ((interfaceMatch = interfacePattern.exec(content)) !== null) {
+  const [, name, body] = interfaceMatch;
+  if (['Query', 'Mutation', 'Subscription'].includes(name)) {
+    continue;
+  }
+  const rawLines = body.split(/\r?\n/);
+  const fieldLines = rawLines
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('/**') && !line.startsWith('*'));
+  const propertyLines = fieldLines.filter((line) => /^[A-Za-z0-9_]+\??:/.test(line));
+  if (propertyLines.length !== 1) {
+    continue;
+  }
+  const propertyMatch = propertyLines[0].match(/^([A-Za-z0-9_]+)(\??): ([^;]+);$/);
+  if (!propertyMatch) {
+    continue;
+  }
+  const optionalMarker = propertyMatch[2];
+  const rawType = propertyMatch[3].trim();
+  const grouped = needsParentheses(rawType) ? `(${rawType})` : rawType;
+  const finalType = optionalMarker === '?'
+    ? `${grouped} | undefined`
+    : rawType;
+  singleFieldInterfaceTypes.set(name, finalType);
+}
+
+const rootNames = ['Query', 'Mutation', 'Subscription'];
+for (const root of rootNames) {
+  const pattern = new RegExp(`export interface ${root} \\{\\n([\\s\\S]*?)\\n\\}(\\n*)`);
+  content = content.replace(pattern, (match, body, trailingNewlines) => {
+    const lines = body.split(/\r?\n/);
+    const transformed = lines.map((line) => {
+      const fieldMatch = line.match(/^(\s*)([A-Za-z0-9_]+)(\??):\s*([^;]+);$/);
+      if (!fieldMatch) {
+        return line;
+      }
+      const [, indent, fieldName, optionalMarker, typeSegmentRaw] = fieldMatch;
+      let typeSegment = typeSegmentRaw;
+      if (!typeSegment.includes('Promise<')) {
+        return line;
+      }
+      let updated = false;
+      for (const [interfaceName, replacementType] of singleFieldInterfaceTypes) {
+        const namePattern = new RegExp(`\\b${interfaceName}\\b`);
+        if (!namePattern.test(typeSegment)) {
+          continue;
+        }
+        const replacePattern = new RegExp(`\\b${interfaceName}\\b`, 'g');
+        typeSegment = typeSegment.replace(replacePattern, replacementType);
+        updated = true;
+      }
+      if (!updated) {
+        return line;
+      }
+      return `${indent}${fieldName}${optionalMarker}: ${typeSegment};`;
+    }).join('\n');
+    return `export interface ${root} {\n${transformed}\n}\n${trailingNewlines}`;
+  });
+}
+
+content = content.replace(
+  /export interface (\w+Args) \{\n([\s\S]*?)\n\}\n\n/g,
+  (match, name, body) => {
+    const trimmed = body.trim();
+    if (!trimmed) return match;
+
+    let comment = '';
+    let remainder = trimmed;
+    const docMatch = remainder.match(/^\/\*\*[\s\S]*?\*\/\s*/);
+    if (docMatch) {
+      comment = docMatch[0];
+      remainder = remainder.slice(docMatch[0].length).trim();
+    }
+
+    const lines = remainder.split(/\r?\n/).filter((line) => line.trim().length > 0);
+    if (lines.length !== 1) return match;
+
+    const propertyMatch = lines[0].trim().match(/^([A-Za-z0-9_]+)(\??): ([^;]+);$/);
+    if (!propertyMatch) return match;
+
+    const [, , optionalMarker, rawType] = propertyMatch;
+    const baseType = rawType.trim();
+    const groupedType = needsParentheses(baseType) ? `(${baseType})` : baseType;
+    const aliasType = optionalMarker === '?' ? `${groupedType} | undefined` : groupedType;
+    const prefix = comment ? `${comment}` : '';
+    return `${prefix}export type ${name} = ${aliasType};\n\n`;
+  },
+);
+
 const futureFields = new Set();
 for (const file of schemaFiles) {
   let previousWasMarker = false;
@@ -247,7 +373,10 @@ const findArgsType = (root, pascalFieldName) => {
     `${root}${pascalFieldName.replace(/Ios/g, 'IOS')}Args`,
   ]);
   for (const name of prefixes) {
-    if (content.includes(`export interface ${name} {`)) {
+    if (
+      content.includes(`export interface ${name} {`) ||
+      content.includes(`export type ${name} =`)
+    ) {
       return name;
     }
   }
@@ -283,7 +412,9 @@ const buildRootHelpers = (root) => {
   lines.push(`export type ${fieldAlias}<K extends keyof ${root}> =`);
   lines.push(`  ${mapName}[K] extends never`);
   lines.push(`    ? () => NonNullable<${root}[K]>`);
-  lines.push(`    : (args: ${mapName}[K]) => NonNullable<${root}[K]>;`);
+  lines.push(`    : undefined extends ${mapName}[K]`);
+  lines.push(`      ? (args?: ${mapName}[K]) => NonNullable<${root}[K]>`);
+  lines.push(`      : (args: ${mapName}[K]) => NonNullable<${root}[K]>;`);
   lines.push('');
   lines.push(`export type ${mapAlias} = {`);
   lines.push(`  [K in keyof ${root}]?: ${fieldAlias}<K>;`);

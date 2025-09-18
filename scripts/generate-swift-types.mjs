@@ -149,6 +149,40 @@ const addDocComment = (lines, description, indent = '') => {
   }
 };
 
+const unwrapNonNull = (graphqlType) => {
+  let current = graphqlType;
+  while (current instanceof GraphQLNonNull) {
+    current = current.ofType;
+  }
+  return current;
+};
+
+const getNamedGraphQLType = (graphqlType) => {
+  const unwrapped = unwrapNonNull(graphqlType);
+  if (unwrapped instanceof GraphQLList) {
+    return null;
+  }
+  return unwrapped;
+};
+
+const getOperationReturnType = (graphqlType) => {
+  const base = swiftTypeFor(graphqlType);
+  const namedType = getNamedGraphQLType(graphqlType);
+  if (!namedType) {
+    return base;
+  }
+  const singleFieldType = singleFieldObjects.get(namedType.name);
+  if (!singleFieldType) {
+    return base;
+  }
+  const fieldInfo = swiftTypeFor(singleFieldType);
+  const fieldOptional = !(graphqlType instanceof GraphQLNonNull);
+  return {
+    type: fieldInfo.type,
+    optional: fieldInfo.optional || fieldOptional,
+  };
+};
+
 const lines = [];
 lines.push(
   '// ============================================================================',
@@ -198,6 +232,14 @@ for (const name of typeNames) {
   }
   if (isInputObjectType(type)) {
     inputs.push(type);
+  }
+}
+
+const singleFieldObjects = new Map();
+for (const objectType of objects) {
+  const fields = Object.values(objectType.getFields());
+  if (fields.length === 1) {
+    singleFieldObjects.set(objectType.name, fields[0].type);
   }
 }
 
@@ -417,18 +459,29 @@ const printOperationProtocol = (operationType) => {
   }
   for (const field of fields) {
     addDocComment(lines, field.description, '    ');
-    const { type, optional } = swiftTypeFor(field.type);
+    const { type, optional } = getOperationReturnType(field.type);
     const returnType = type + (optional ? '?' : '');
-    const args = field.args.map((arg) => {
+    if (field.args.length === 0) {
+      lines.push(`    func ${escapeSwiftName(field.name)}() async throws -> ${returnType}`);
+      continue;
+    }
+    if (field.args.length === 1) {
+      const arg = field.args[0];
+      const { type: argType, optional: argOptional } = swiftTypeFor(arg.type);
+      const argName = escapeSwiftName(arg.name);
+      const finalType = argType + (argOptional ? '?' : '');
+      const defaultValue = argOptional ? ' = nil' : '';
+      lines.push(`    func ${escapeSwiftName(field.name)}(_ ${argName}: ${finalType}${defaultValue}) async throws -> ${returnType}`);
+      continue;
+    }
+    const params = field.args.map((arg) => {
       const { type: argType, optional: argOptional } = swiftTypeFor(arg.type);
       const argName = escapeSwiftName(arg.name);
       const finalType = argType + (argOptional ? '?' : '');
       const defaultValue = argOptional ? ' = nil' : '';
       return `${argName}: ${finalType}${defaultValue}`;
-    });
-    const params = args.length > 0 ? args.join(', ') : '';
-    const paramSegment = params ? `(${params})` : '()';
-    lines.push(`    func ${escapeSwiftName(field.name)}${paramSegment} async throws -> ${returnType}`);
+    }).join(', ');
+    lines.push(`    func ${escapeSwiftName(field.name)}(${params}) async throws -> ${returnType}`);
   }
   lines.push('}', '');
 };
@@ -444,7 +497,7 @@ const printOperationHelpers = (operationType) => {
 
   fields.forEach((field) => {
     const aliasName = `${rootName}${capitalize(field.name)}Handler`;
-    const { type, optional } = swiftTypeFor(field.type);
+    const { type, optional } = getOperationReturnType(field.type);
     const returnType = type + (optional ? '?' : '');
     if (field.args.length === 0) {
       lines.push(`public typealias ${aliasName} = () async throws -> ${returnType}`);

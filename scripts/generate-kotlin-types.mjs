@@ -178,6 +178,14 @@ for (const unionType of unions) {
   unionNames.add(unionType.name);
 }
 
+const singleFieldObjects = new Map();
+for (const objectType of objects) {
+  const fields = Object.values(objectType.getFields());
+  if (fields.length === 1) {
+    singleFieldObjects.set(objectType.name, fields[0].type);
+  }
+}
+
 const getTypeMetadata = (graphqlType) => {
   if (graphqlType instanceof GraphQLNonNull) {
     const inner = getTypeMetadata(graphqlType.ofType);
@@ -221,6 +229,46 @@ const getTypeMetadata = (graphqlType) => {
 const getKotlinType = (graphqlType) => {
   const metadata = getTypeMetadata(graphqlType);
   return { type: metadata.kotlinType, nullable: metadata.nullable, metadata };
+};
+
+const unwrapNonNull = (graphqlType) => {
+  let current = graphqlType;
+  while (current instanceof GraphQLNonNull) {
+    current = current.ofType;
+  }
+  return current;
+};
+
+const getNamedGraphQLType = (graphqlType) => {
+  const unwrapped = unwrapNonNull(graphqlType);
+  if (unwrapped instanceof GraphQLList) {
+    return null;
+  }
+  return unwrapped;
+};
+
+const isNullableGraphQLType = (graphqlType) => !(graphqlType instanceof GraphQLNonNull);
+
+const getOperationReturnType = (graphqlType) => {
+  const base = getKotlinType(graphqlType);
+  if (base.metadata.kind === 'list') {
+    return base;
+  }
+  const namedType = getNamedGraphQLType(graphqlType);
+  if (!namedType) {
+    return base;
+  }
+  const singleFieldType = singleFieldObjects.get(namedType.name);
+  if (!singleFieldType) {
+    return base;
+  }
+  const fieldInfo = getKotlinType(singleFieldType);
+  const finalNullable = base.nullable || fieldInfo.nullable || isNullableGraphQLType(graphqlType);
+  return {
+    type: fieldInfo.type,
+    nullable: finalNullable,
+    metadata: fieldInfo.metadata,
+  };
 };
 
 const buildFromJsonExpression = (metadata, sourceExpression) => {
@@ -523,7 +571,7 @@ const printOperationInterface = (operationType) => {
     .sort((a, b) => a.name.localeCompare(b.name));
   for (const field of fields) {
     addDocComment(lines, field.description, '    ');
-    const { type, nullable } = getKotlinType(field.type);
+    const { type, nullable } = getOperationReturnType(field.type);
     const returnType = type + (nullable ? '?' : '');
     const args = field.args.map((arg) => {
       const { type: argType, nullable: argNullable } = getKotlinType(arg.type);
@@ -549,7 +597,7 @@ const printOperationHelpers = (operationType) => {
 
   fields.forEach((field) => {
     const aliasName = `${rootName}${capitalize(field.name)}Handler`;
-    const { type, nullable } = getKotlinType(field.type);
+    const { type, nullable } = getOperationReturnType(field.type);
     const returnType = type + (nullable ? '?' : '');
     if (field.args.length === 0) {
       lines.push(`public typealias ${aliasName} = suspend () -> ${returnType}`);
