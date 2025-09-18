@@ -191,9 +191,9 @@ public struct EntitlementIOS: Codable {
     public var transactionId: String
 }
 
-public struct FetchProductsResult: Codable {
-    public var products: [Product]?
-    public var subscriptions: [ProductSubscription]?
+public enum FetchProductsResult {
+    case products([Product]?)
+    case subscriptions([ProductSubscription]?)
 }
 
 public struct PricingPhaseAndroid: Codable {
@@ -407,9 +407,9 @@ public struct RenewalInfoIOS: Codable {
     public var willAutoRenew: Bool
 }
 
-public struct RequestPurchaseResult: Codable {
-    public var purchase: Purchase?
-    public var purchases: [Purchase]?
+public enum RequestPurchaseResult {
+    case purchase(Purchase?)
+    case purchases([Purchase]?)
 }
 
 public struct SubscriptionInfoIOS: Codable {
@@ -439,9 +439,7 @@ public struct SubscriptionStatusIOS: Codable {
     public var state: String
 }
 
-public struct VoidResult: Codable {
-    public var success: Bool
-}
+public typealias VoidResult = Void
 
 // MARK: - Input Objects
 
@@ -935,11 +933,11 @@ public protocol MutationResolver {
     /// Consume a purchase token so it can be repurchased
     func consumePurchaseAndroid(_ purchaseToken: String) async throws -> Bool
     /// Open the native subscription management surface
-    func deepLinkToSubscriptions(_ options: DeepLinkOptions? = nil) async throws -> Bool
+    func deepLinkToSubscriptions(_ options: DeepLinkOptions? = nil) async throws -> Void
     /// Close the platform billing connection
     func endConnection() async throws -> Bool
     /// Finish a transaction after validating receipts
-    func finishTransaction(purchase: PurchaseInput, isConsumable: Bool? = nil) async throws -> Bool
+    func finishTransaction(purchase: PurchaseInput, isConsumable: Bool? = nil) async throws -> Void
     /// Establish the platform billing connection
     func initConnection() async throws -> Bool
     /// Present the App Store code redemption sheet
@@ -949,7 +947,7 @@ public protocol MutationResolver {
     /// Purchase the promoted product surfaced by the App Store
     func requestPurchaseOnPromotedProductIOS() async throws -> Bool
     /// Restore completed purchases across platforms
-    func restorePurchases() async throws -> Bool
+    func restorePurchases() async throws -> Void
     /// Open subscription management UI and return changed purchases (iOS 15+)
     func showManageSubscriptionsIOS() async throws -> [PurchaseIOS]
     /// Force a StoreKit sync for transactions (iOS 15+)
@@ -1012,14 +1010,14 @@ public typealias MutationAcknowledgePurchaseAndroidHandler = (_ purchaseToken: S
 public typealias MutationBeginRefundRequestIOSHandler = (_ sku: String) async throws -> String?
 public typealias MutationClearTransactionIOSHandler = () async throws -> Bool
 public typealias MutationConsumePurchaseAndroidHandler = (_ purchaseToken: String) async throws -> Bool
-public typealias MutationDeepLinkToSubscriptionsHandler = (_ options: DeepLinkOptions?) async throws -> Bool
+public typealias MutationDeepLinkToSubscriptionsHandler = (_ options: DeepLinkOptions?) async throws -> Void
 public typealias MutationEndConnectionHandler = () async throws -> Bool
-public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, _ isConsumable: Bool?) async throws -> Bool
+public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, _ isConsumable: Bool?) async throws -> Void
 public typealias MutationInitConnectionHandler = () async throws -> Bool
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = () async throws -> Bool
 public typealias MutationRequestPurchaseHandler = (_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = () async throws -> Bool
-public typealias MutationRestorePurchasesHandler = () async throws -> Bool
+public typealias MutationRestorePurchasesHandler = () async throws -> Void
 public typealias MutationShowManageSubscriptionsIOSHandler = () async throws -> [PurchaseIOS]
 public typealias MutationSyncIOSHandler = () async throws -> Bool
 public typealias MutationValidateReceiptHandler = (_ options: ReceiptValidationProps) async throws -> ReceiptValidationResult

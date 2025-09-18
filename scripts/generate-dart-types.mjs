@@ -116,6 +116,31 @@ const inputs = [];
 const unions = [];
 const operationTypes = [];
 
+const unionWrapperNames = new Set();
+for (const schemaPath of schemaPaths) {
+  let expectTypeName = false;
+  for (const line of readFileSync(schemaPath, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#') && trimmed.toLowerCase().includes('=> union')) {
+      expectTypeName = true;
+      continue;
+    }
+    if (expectTypeName) {
+      if (trimmed.length === 0) {
+        continue;
+      }
+      if (trimmed.startsWith('#')) {
+        continue;
+      }
+      const typeMatch = trimmed.match(/^type\s+([A-Za-z0-9_]+)/);
+      if (typeMatch) {
+        unionWrapperNames.add(typeMatch[1]);
+      }
+      expectTypeName = false;
+    }
+  }
+}
+
 for (const name of typeNames) {
   const type = typeMap[name];
   if (isScalarType(type)) {
@@ -162,7 +187,7 @@ const unionNames = new Set(unions.map((value) => value.name));
 const singleFieldObjects = new Map();
 for (const objectType of objects) {
   const fields = Object.values(objectType.getFields());
-  if (fields.length === 1) {
+  if (fields.length === 1 && objectType.name.endsWith('Args')) {
     singleFieldObjects.set(objectType.name, fields[0].type);
   }
 }
@@ -235,6 +260,13 @@ const getOperationReturnType = (graphqlType) => {
     return base;
   }
   const namedType = getNamedGraphQLType(graphqlType);
+  if (namedType && namedType.name === 'VoidResult') {
+    return {
+      type: 'void',
+      nullable: isNullableGraphQLType(graphqlType),
+      metadata: base.metadata,
+    };
+  }
   if (!namedType) {
     return base;
   }
@@ -250,6 +282,26 @@ const getOperationReturnType = (graphqlType) => {
     metadata: fieldInfo.metadata,
   };
 };
+
+const resultUnionObjects = new Map();
+for (const objectType of objects) {
+  if (!unionWrapperNames.has(objectType.name)) continue;
+  const fields = Object.values(objectType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+  if (fields.length === 0) continue;
+  const unionEntries = [];
+  let allOptional = true;
+  for (const field of fields) {
+    if (field.type instanceof GraphQLNonNull) {
+      allOptional = false;
+      break;
+    }
+    const { type, nullable, metadata } = getDartType(field.type);
+    unionEntries.push({ field, type, nullable, metadata });
+  }
+  if (!allOptional) continue;
+  if (unionEntries.length === 0) continue;
+  resultUnionObjects.set(objectType.name, unionEntries);
+}
 
 const buildFromJsonExpression = (metadata, sourceExpression) => {
   if (metadata.kind === 'list') {
@@ -385,6 +437,26 @@ const printInterface = (interfaceType) => {
 };
 
 const printObject = (objectType) => {
+  if (objectType.name === 'VoidResult') {
+    lines.push('typedef VoidResult = void;', '');
+    return;
+  }
+  if (resultUnionObjects.has(objectType.name)) {
+    const unionEntries = resultUnionObjects.get(objectType.name);
+    addDocComment(lines, objectType.description);
+    lines.push(`abstract class ${objectType.name} {`);
+    lines.push(`  const ${objectType.name}();`);
+    lines.push('}', '');
+    unionEntries.forEach(({ field, type, nullable }) => {
+      const className = `${objectType.name}${toPascalCase(field.name)}`;
+      const valueType = `${type}${nullable ? '?' : ''}`;
+      lines.push(`class ${className} extends ${objectType.name} {`);
+      lines.push(`  const ${className}(this.value);`);
+      lines.push(`  final ${valueType} value;`);
+      lines.push('}', '');
+    });
+    return;
+  }
   addDocComment(lines, objectType.description);
   const interfacesForObject = objectType.getInterfaces().map((iface) => iface.name);
   const unionsForObject = unionMembership.has(objectType.name)

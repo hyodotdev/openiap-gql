@@ -486,26 +486,11 @@ public data class EntitlementIOS(
     )
 }
 
-public data class FetchProductsResult(
-    val products: List<Product>? = null,
-    val subscriptions: List<ProductSubscription>? = null
-) {
+public sealed interface FetchProductsResult
 
-    companion object {
-        fun fromJson(json: Map<String, Any?>): FetchProductsResult {
-            return FetchProductsResult(
-                products = (json["products"] as List<*>?)?.map { Product.fromJson((it as Map<String, Any?>)) },
-                subscriptions = (json["subscriptions"] as List<*>?)?.map { ProductSubscription.fromJson((it as Map<String, Any?>)) },
-            )
-        }
-    }
+public data class FetchProductsResultProducts(val value: List<Product>?) : FetchProductsResult
 
-    fun toJson(): Map<String, Any?> = mapOf(
-        "__typename" to "FetchProductsResult",
-        "products" to products?.map { it.toJson() },
-        "subscriptions" to subscriptions?.map { it.toJson() },
-    )
-}
+public data class FetchProductsResultSubscriptions(val value: List<ProductSubscription>?) : FetchProductsResult
 
 public data class PricingPhaseAndroid(
     val billingCycleCount: Int,
@@ -1236,26 +1221,11 @@ public data class RenewalInfoIOS(
     )
 }
 
-public data class RequestPurchaseResult(
-    val purchase: Purchase? = null,
-    val purchases: List<Purchase>? = null
-) {
+public sealed interface RequestPurchaseResult
 
-    companion object {
-        fun fromJson(json: Map<String, Any?>): RequestPurchaseResult {
-            return RequestPurchaseResult(
-                purchase = (json["purchase"] as Map<String, Any?>?)?.let { Purchase.fromJson(it) },
-                purchases = (json["purchases"] as List<*>?)?.map { Purchase.fromJson((it as Map<String, Any?>)) },
-            )
-        }
-    }
+public data class RequestPurchaseResultPurchase(val value: Purchase?) : RequestPurchaseResult
 
-    fun toJson(): Map<String, Any?> = mapOf(
-        "__typename" to "RequestPurchaseResult",
-        "purchase" to purchase?.toJson(),
-        "purchases" to purchases?.map { it.toJson() },
-    )
-}
+public data class RequestPurchaseResultPurchases(val value: List<Purchase>?) : RequestPurchaseResult
 
 public data class SubscriptionInfoIOS(
     val introductoryOffer: SubscriptionOfferIOS? = null,
@@ -1362,23 +1332,7 @@ public data class SubscriptionStatusIOS(
     )
 }
 
-public data class VoidResult(
-    val success: Boolean
-) {
-
-    companion object {
-        fun fromJson(json: Map<String, Any?>): VoidResult {
-            return VoidResult(
-                success = json["success"] as Boolean,
-            )
-        }
-    }
-
-    fun toJson(): Map<String, Any?> = mapOf(
-        "__typename" to "VoidResult",
-        "success" to success,
-    )
-}
+public typealias VoidResult = Unit
 
 // MARK: - Input Objects
 
@@ -1954,7 +1908,7 @@ public interface MutationResolver {
     /**
      * Open the native subscription management surface
      */
-    suspend fun deepLinkToSubscriptions(options: DeepLinkOptions? = null): Boolean
+    suspend fun deepLinkToSubscriptions(options: DeepLinkOptions? = null): Unit
     /**
      * Close the platform billing connection
      */
@@ -1962,7 +1916,7 @@ public interface MutationResolver {
     /**
      * Finish a transaction after validating receipts
      */
-    suspend fun finishTransaction(purchase: PurchaseInput, isConsumable: Boolean? = null): Boolean
+    suspend fun finishTransaction(purchase: PurchaseInput, isConsumable: Boolean? = null): Unit
     /**
      * Establish the platform billing connection
      */
@@ -1982,7 +1936,7 @@ public interface MutationResolver {
     /**
      * Restore completed purchases across platforms
      */
-    suspend fun restorePurchases(): Boolean
+    suspend fun restorePurchases(): Unit
     /**
      * Open subscription management UI and return changed purchases (iOS 15+)
      */
@@ -2093,14 +2047,14 @@ public typealias MutationAcknowledgePurchaseAndroidHandler = suspend (purchaseTo
 public typealias MutationBeginRefundRequestIOSHandler = suspend (sku: String) -> String?
 public typealias MutationClearTransactionIOSHandler = suspend () -> Boolean
 public typealias MutationConsumePurchaseAndroidHandler = suspend (purchaseToken: String) -> Boolean
-public typealias MutationDeepLinkToSubscriptionsHandler = suspend (options: DeepLinkOptions?) -> Boolean
+public typealias MutationDeepLinkToSubscriptionsHandler = suspend (options: DeepLinkOptions?) -> Unit
 public typealias MutationEndConnectionHandler = suspend () -> Boolean
-public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> Boolean
+public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> Unit
 public typealias MutationInitConnectionHandler = suspend () -> Boolean
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> Boolean
 public typealias MutationRequestPurchaseHandler = suspend (params: RequestPurchaseProps) -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> Boolean
-public typealias MutationRestorePurchasesHandler = suspend () -> Boolean
+public typealias MutationRestorePurchasesHandler = suspend () -> Unit
 public typealias MutationShowManageSubscriptionsIOSHandler = suspend () -> List<PurchaseIOS>
 public typealias MutationSyncIOSHandler = suspend () -> Boolean
 public typealias MutationValidateReceiptHandler = suspend (options: ReceiptValidationProps) -> ReceiptValidationResult

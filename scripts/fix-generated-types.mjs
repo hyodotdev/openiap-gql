@@ -219,7 +219,33 @@ const needsParentheses = (value) => {
   return /[|&]/.test(trimmed);
 };
 
+const unionWrapperNames = new Set();
+for (const file of schemaDefinitionFiles) {
+  let expectTypeName = false;
+  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#') && trimmed.toLowerCase().includes('=> union')) {
+      expectTypeName = true;
+      continue;
+    }
+    if (expectTypeName) {
+      if (trimmed.length === 0) {
+        continue;
+      }
+      if (trimmed.startsWith('#')) {
+        continue;
+      }
+      const typeMatch = trimmed.match(/^type\s+([A-Za-z0-9_]+)/);
+      if (typeMatch) {
+        unionWrapperNames.add(typeMatch[1]);
+      }
+      expectTypeName = false;
+    }
+  }
+}
+
 const singleFieldInterfaceTypes = new Map();
+const optionalUnionInterfaces = new Map();
 const interfacePattern = /export interface (\w+) \{\n([\s\S]*?)\n\}\n/g;
 let interfaceMatch;
 while ((interfaceMatch = interfacePattern.exec(content)) !== null) {
@@ -232,21 +258,117 @@ while ((interfaceMatch = interfacePattern.exec(content)) !== null) {
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith('/**') && !line.startsWith('*'));
   const propertyLines = fieldLines.filter((line) => /^[A-Za-z0-9_]+\??:/.test(line));
-  if (propertyLines.length !== 1) {
+
+  const propertyMatches = propertyLines
+    .map((line) => line.match(/^([A-Za-z0-9_]+)(\??): ([^;]+);$/))
+    .filter(Boolean);
+
+  if (propertyMatches.length === 0) {
     continue;
   }
-  const propertyMatch = propertyLines[0].match(/^([A-Za-z0-9_]+)(\??): ([^;]+);$/);
-  if (!propertyMatch) {
+
+  if (propertyMatches.length === 1) {
+    const shouldAlias = name.endsWith('Args') || name === 'VoidResult';
+    if (!shouldAlias) {
+      continue;
+    }
+    const [, , optionalMarker, rawType] = propertyMatches[0];
+    const grouped = needsParentheses(rawType.trim()) ? `(${rawType.trim()})` : rawType.trim();
+    let finalType = optionalMarker === '?'
+      ? `${grouped} | undefined`
+      : rawType.trim();
+    if (name === 'VoidResult') {
+      finalType = 'void';
+    }
+    singleFieldInterfaceTypes.set(name, finalType);
     continue;
   }
-  const optionalMarker = propertyMatch[2];
-  const rawType = propertyMatch[3].trim();
-  const grouped = needsParentheses(rawType) ? `(${rawType})` : rawType;
-  const finalType = optionalMarker === '?'
-    ? `${grouped} | undefined`
-    : rawType;
-  singleFieldInterfaceTypes.set(name, finalType);
+
+  const allOptional = propertyMatches.every((match) => match[2] === '?');
+  if (!allOptional) {
+    continue;
+  }
+
+  if (!unionWrapperNames.has(name)) {
+    continue;
+  }
+
+  const stripParens = (value) => {
+    let result = value.trim();
+    const isWrapped = (str) => {
+      if (!str.startsWith('(') || !str.endsWith(')')) return false;
+      let depth = 0;
+      for (let i = 0; i < str.length; i += 1) {
+        const ch = str[i];
+        if (ch === '(') depth += 1;
+        else if (ch === ')') depth -= 1;
+        if (depth === 0 && i < str.length - 1) {
+          return false;
+        }
+      }
+      return depth === 0;
+    };
+
+    while (isWrapped(result)) {
+      result = result.slice(1, -1).trim();
+    }
+    return result;
+  };
+
+  const splitUnion = (value) => {
+    const tokens = [];
+    let current = '';
+    let depth = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      const ch = value[i];
+      if (ch === '<' || ch === '(') {
+        depth += 1;
+      } else if (ch === '>' || ch === ')') {
+        depth -= 1;
+      }
+      if (ch === '|' && depth === 0) {
+        tokens.push(current.trim());
+        current = '';
+        continue;
+      }
+      current += ch;
+    }
+    if (current.trim()) {
+      tokens.push(current.trim());
+    }
+    return tokens;
+  };
+
+  const unionTypes = [];
+  const seenTypes = new Set();
+  let hasNull = false;
+
+  for (const match of propertyMatches) {
+    const cleaned = stripParens(match[3]);
+    for (const token of splitUnion(cleaned)) {
+      const normalized = token.trim();
+      if (!normalized || normalized === 'undefined') continue;
+      if (normalized === 'null') {
+        hasNull = true;
+        continue;
+      }
+      if (seenTypes.has(normalized)) continue;
+      seenTypes.add(normalized);
+      unionTypes.push(normalized);
+    }
+  }
+
+  if (hasNull) {
+    unionTypes.push('null');
+  }
+
+  if (unionTypes.length > 0) {
+    optionalUnionInterfaces.set(name, unionTypes.join(' | '));
+  }
 }
+
+
+
 
 const rootNames = ['Query', 'Mutation', 'Subscription'];
 for (const root of rootNames) {
@@ -273,6 +395,15 @@ for (const root of rootNames) {
         typeSegment = typeSegment.replace(replacePattern, replacementType);
         updated = true;
       }
+      for (const [interfaceName, unionType] of optionalUnionInterfaces) {
+        const namePattern = new RegExp(`\\b${interfaceName}\\b`);
+        if (!namePattern.test(typeSegment)) {
+          continue;
+        }
+        const replacePattern = new RegExp(`\\b${interfaceName}\\b`, 'g');
+        typeSegment = typeSegment.replace(replacePattern, `(${unionType})`);
+        updated = true;
+      }
       if (!updated) {
         return line;
       }
@@ -282,34 +413,15 @@ for (const root of rootNames) {
   });
 }
 
-content = content.replace(
-  /export interface (\w+Args) \{\n([\s\S]*?)\n\}\n\n/g,
-  (match, name, body) => {
-    const trimmed = body.trim();
-    if (!trimmed) return match;
+for (const [name, aliasType] of singleFieldInterfaceTypes) {
+  const pattern = new RegExp(`export interface ${name} \\{[\\s\\S]*?\\}\n+`, 'g');
+  content = content.replace(pattern, `export type ${name} = ${aliasType};\n\n`);
+}
 
-    let comment = '';
-    let remainder = trimmed;
-    const docMatch = remainder.match(/^\/\*\*[\s\S]*?\*\/\s*/);
-    if (docMatch) {
-      comment = docMatch[0];
-      remainder = remainder.slice(docMatch[0].length).trim();
-    }
-
-    const lines = remainder.split(/\r?\n/).filter((line) => line.trim().length > 0);
-    if (lines.length !== 1) return match;
-
-    const propertyMatch = lines[0].trim().match(/^([A-Za-z0-9_]+)(\??): ([^;]+);$/);
-    if (!propertyMatch) return match;
-
-    const [, , optionalMarker, rawType] = propertyMatch;
-    const baseType = rawType.trim();
-    const groupedType = needsParentheses(baseType) ? `(${baseType})` : baseType;
-    const aliasType = optionalMarker === '?' ? `${groupedType} | undefined` : groupedType;
-    const prefix = comment ? `${comment}` : '';
-    return `${prefix}export type ${name} = ${aliasType};\n\n`;
-  },
-);
+for (const [name, unionType] of optionalUnionInterfaces) {
+  const pattern = new RegExp(`export interface ${name} \\{[\\s\\S]*?\\}\n+`, 'g');
+  content = content.replace(pattern, `export type ${name} = ${unionType};\n\n`);
+}
 
 const futureFields = new Set();
 for (const file of schemaFiles) {
@@ -345,6 +457,19 @@ const wrapReturns = (interfaceName) => {
 
 wrapReturns('Query');
 wrapReturns('Mutation');
+
+for (const [name, aliasType] of singleFieldInterfaceTypes) {
+  content = content.replaceAll(`Promise<${name}>`, `Promise<${aliasType}>`);
+}
+
+for (const [name, unionType] of optionalUnionInterfaces) {
+  content = content.replaceAll(`Promise<${name}>`, `Promise<(${unionType})>`);
+  const nullableToken = `Promise<(${name} | null)>`;
+  if (content.includes(nullableToken)) {
+    const unionWithNull = unionType.includes('null') ? unionType : `${unionType} | null`;
+    content = content.replaceAll(nullableToken, `Promise<(${unionWithNull})>`);
+  }
+}
 
 content = content.replace(/^\s*_placeholder\??: [^;]+;\n/gm, '');
 

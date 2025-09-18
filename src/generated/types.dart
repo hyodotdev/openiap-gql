@@ -753,29 +753,18 @@ class EntitlementIOS {
   }
 }
 
-class FetchProductsResult {
-  const FetchProductsResult({
-    this.products,
-    this.subscriptions,
-  });
+abstract class FetchProductsResult {
+  const FetchProductsResult();
+}
 
-  final List<Product>? products;
-  final List<ProductSubscription>? subscriptions;
+class FetchProductsResultProducts extends FetchProductsResult {
+  const FetchProductsResultProducts(this.value);
+  final List<Product>? value;
+}
 
-  factory FetchProductsResult.fromJson(Map<String, dynamic> json) {
-    return FetchProductsResult(
-      products: (json['products'] as List<dynamic>?) == null ? null : (json['products'] as List<dynamic>?)!.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList(),
-      subscriptions: (json['subscriptions'] as List<dynamic>?) == null ? null : (json['subscriptions'] as List<dynamic>?)!.map((e) => ProductSubscription.fromJson(e as Map<String, dynamic>)).toList(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      '__typename': 'FetchProductsResult',
-      'products': products == null ? null : products!.map((e) => e.toJson()).toList(),
-      'subscriptions': subscriptions == null ? null : subscriptions!.map((e) => e.toJson()).toList(),
-    };
-  }
+class FetchProductsResultSubscriptions extends FetchProductsResult {
+  const FetchProductsResultSubscriptions(this.value);
+  final List<ProductSubscription>? value;
 }
 
 class PricingPhaseAndroid {
@@ -1702,29 +1691,18 @@ class RenewalInfoIOS {
   }
 }
 
-class RequestPurchaseResult {
-  const RequestPurchaseResult({
-    this.purchase,
-    this.purchases,
-  });
+abstract class RequestPurchaseResult {
+  const RequestPurchaseResult();
+}
 
-  final Purchase? purchase;
-  final List<Purchase>? purchases;
+class RequestPurchaseResultPurchase extends RequestPurchaseResult {
+  const RequestPurchaseResultPurchase(this.value);
+  final Purchase? value;
+}
 
-  factory RequestPurchaseResult.fromJson(Map<String, dynamic> json) {
-    return RequestPurchaseResult(
-      purchase: json['purchase'] != null ? Purchase.fromJson(json['purchase'] as Map<String, dynamic>) : null,
-      purchases: (json['purchases'] as List<dynamic>?) == null ? null : (json['purchases'] as List<dynamic>?)!.map((e) => Purchase.fromJson(e as Map<String, dynamic>)).toList(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      '__typename': 'RequestPurchaseResult',
-      'purchase': purchase?.toJson(),
-      'purchases': purchases == null ? null : purchases!.map((e) => e.toJson()).toList(),
-    };
-  }
+class RequestPurchaseResultPurchases extends RequestPurchaseResult {
+  const RequestPurchaseResultPurchases(this.value);
+  final List<Purchase>? value;
 }
 
 class SubscriptionInfoIOS {
@@ -1855,26 +1833,7 @@ class SubscriptionStatusIOS {
   }
 }
 
-class VoidResult {
-  const VoidResult({
-    required this.success,
-  });
-
-  final bool success;
-
-  factory VoidResult.fromJson(Map<String, dynamic> json) {
-    return VoidResult(
-      success: json['success'] as bool,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      '__typename': 'VoidResult',
-      'success': success,
-    };
-  }
-}
+typedef VoidResult = void;
 
 // MARK: - Input Objects
 
@@ -2606,11 +2565,11 @@ abstract class MutationResolver {
   /// Consume a purchase token so it can be repurchased
   Future<bool> consumePurchaseAndroid(String purchaseToken);
   /// Open the native subscription management surface
-  Future<bool> deepLinkToSubscriptions([DeepLinkOptions? options]);
+  Future<void> deepLinkToSubscriptions([DeepLinkOptions? options]);
   /// Close the platform billing connection
   Future<bool> endConnection();
   /// Finish a transaction after validating receipts
-  Future<bool> finishTransaction({
+  Future<void> finishTransaction({
     required PurchaseInput purchase,
     bool? isConsumable,
   });
@@ -2623,7 +2582,7 @@ abstract class MutationResolver {
   /// Purchase the promoted product surfaced by the App Store
   Future<bool> requestPurchaseOnPromotedProductIOS();
   /// Restore completed purchases across platforms
-  Future<bool> restorePurchases();
+  Future<void> restorePurchases();
   /// Open subscription management UI and return changed purchases (iOS 15+)
   Future<List<PurchaseIOS>> showManageSubscriptionsIOS();
   /// Force a StoreKit sync for transactions (iOS 15+)
@@ -2686,9 +2645,9 @@ typedef MutationAcknowledgePurchaseAndroidHandler = Future<bool> Function(String
 typedef MutationBeginRefundRequestIOSHandler = Future<String?> Function(String sku);
 typedef MutationClearTransactionIOSHandler = Future<bool> Function();
 typedef MutationConsumePurchaseAndroidHandler = Future<bool> Function(String purchaseToken);
-typedef MutationDeepLinkToSubscriptionsHandler = Future<bool> Function([DeepLinkOptions? options]);
+typedef MutationDeepLinkToSubscriptionsHandler = Future<void> Function([DeepLinkOptions? options]);
 typedef MutationEndConnectionHandler = Future<bool> Function();
-typedef MutationFinishTransactionHandler = Future<bool> Function({
+typedef MutationFinishTransactionHandler = Future<void> Function({
   required PurchaseInput purchase,
   bool? isConsumable,
 });
@@ -2696,7 +2655,7 @@ typedef MutationInitConnectionHandler = Future<bool> Function();
 typedef MutationPresentCodeRedemptionSheetIOSHandler = Future<bool> Function();
 typedef MutationRequestPurchaseHandler = Future<RequestPurchaseResult?> Function(RequestPurchaseProps params);
 typedef MutationRequestPurchaseOnPromotedProductIOSHandler = Future<bool> Function();
-typedef MutationRestorePurchasesHandler = Future<bool> Function();
+typedef MutationRestorePurchasesHandler = Future<void> Function();
 typedef MutationShowManageSubscriptionsIOSHandler = Future<List<PurchaseIOS>> Function();
 typedef MutationSyncIOSHandler = Future<bool> Function();
 typedef MutationValidateReceiptHandler = Future<ReceiptValidationResult> Function(ReceiptValidationProps options);
