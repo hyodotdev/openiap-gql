@@ -159,6 +159,14 @@ const objectNames = new Set(objects.map((value) => value.name));
 const inputNames = new Set(inputs.map((value) => value.name));
 const unionNames = new Set(unions.map((value) => value.name));
 
+const singleFieldObjects = new Map();
+for (const objectType of objects) {
+  const fields = Object.values(objectType.getFields());
+  if (fields.length === 1) {
+    singleFieldObjects.set(objectType.name, fields[0].type);
+  }
+}
+
 const getTypeMetadata = (graphqlType) => {
   if (graphqlType instanceof GraphQLNonNull) {
     const inner = getTypeMetadata(graphqlType.ofType);
@@ -201,6 +209,46 @@ const getTypeMetadata = (graphqlType) => {
 const getDartType = (graphqlType) => {
   const metadata = getTypeMetadata(graphqlType);
   return { type: metadata.dartType, nullable: metadata.nullable, metadata };
+};
+
+const isNullableGraphQLType = (graphqlType) => !(graphqlType instanceof GraphQLNonNull);
+
+const unwrapNonNull = (graphqlType) => {
+  let current = graphqlType;
+  while (current instanceof GraphQLNonNull) {
+    current = current.ofType;
+  }
+  return current;
+};
+
+const getNamedGraphQLType = (graphqlType) => {
+  const unwrapped = unwrapNonNull(graphqlType);
+  if (unwrapped instanceof GraphQLList) {
+    return null;
+  }
+  return unwrapped;
+};
+
+const getOperationReturnType = (graphqlType) => {
+  const base = getDartType(graphqlType);
+  if (base.metadata.kind === 'list') {
+    return base;
+  }
+  const namedType = getNamedGraphQLType(graphqlType);
+  if (!namedType) {
+    return base;
+  }
+  const singleFieldType = singleFieldObjects.get(namedType.name);
+  if (!singleFieldType) {
+    return base;
+  }
+  const fieldInfo = getDartType(singleFieldType);
+  const finalNullable = base.nullable || fieldInfo.nullable || isNullableGraphQLType(graphqlType);
+  return {
+    type: fieldInfo.type,
+    nullable: finalNullable,
+    metadata: fieldInfo.metadata,
+  };
 };
 
 const buildFromJsonExpression = (metadata, sourceExpression) => {
@@ -588,20 +636,29 @@ const printOperationInterface = (operationType) => {
     .sort((a, b) => a.name.localeCompare(b.name));
   for (const field of fields) {
     addDocComment(lines, field.description, '  ');
-    const { type, nullable } = getDartType(field.type);
+    const { type, nullable } = getOperationReturnType(field.type);
     const returnType = `${type}${nullable ? '?' : ''}`;
     if (field.args.length === 0) {
       lines.push(`  Future<${returnType}> ${escapeDartName(field.name)}();`);
       continue;
     }
+    if (field.args.length === 1) {
+      const arg = field.args[0];
+      const { type: argType, nullable: argNullable } = getDartType(arg.type);
+      const finalType = `${argType}${argNullable ? '?' : ''}`;
+      const argName = escapeDartName(arg.name);
+      const open = argNullable ? '[' : '';
+      const close = argNullable ? ']' : '';
+      lines.push(`  Future<${returnType}> ${escapeDartName(field.name)}(${open}${finalType} ${argName}${close});`);
+      continue;
+    }
     lines.push('  Future<' + returnType + `> ${escapeDartName(field.name)}({`);
-    field.args.forEach((arg, index) => {
+    field.args.forEach((arg) => {
       const { type: argType, nullable: argNullable } = getDartType(arg.type);
       const finalType = `${argType}${argNullable ? '?' : ''}`;
       const argName = escapeDartName(arg.name);
       const prefix = argNullable ? '' : 'required ';
-      const suffix = index === field.args.length - 1 ? '' : '';
-      lines.push(`    ${prefix}${finalType} ${argName},${suffix}`);
+      lines.push(`    ${prefix}${finalType} ${argName},`);
     });
     lines.push('  });');
   }
@@ -620,10 +677,22 @@ const printOperationHelpers = (operationType) => {
   fields.forEach((field) => {
     const pascalField = toPascalCase(field.name);
     const aliasName = `${rootName}${pascalField}Handler`;
-    const { type, nullable } = getDartType(field.type);
+    const { type, nullable } = getOperationReturnType(field.type);
     const returnType = `${type}${nullable ? '?' : ''}`;
     if (field.args.length === 0) {
       lines.push(`typedef ${aliasName} = Future<${returnType}> Function();`);
+      return;
+    }
+    if (field.args.length === 1) {
+      const arg = field.args[0];
+      const { type: argType, nullable: argNullable } = getDartType(arg.type);
+      const finalType = `${argType}${argNullable ? '?' : ''}`;
+      const argName = escapeDartName(arg.name);
+      if (argNullable) {
+        lines.push(`typedef ${aliasName} = Future<${returnType}> Function([${finalType} ${argName}]);`);
+      } else {
+        lines.push(`typedef ${aliasName} = Future<${returnType}> Function(${finalType} ${argName});`);
+      }
       return;
     }
     lines.push(`typedef ${aliasName} = Future<${returnType}> Function({`);

@@ -1954,7 +1954,7 @@ public interface MutationResolver {
     /**
      * Open the native subscription management surface
      */
-    suspend fun deepLinkToSubscriptions(options: DeepLinkOptions? = null): VoidResult
+    suspend fun deepLinkToSubscriptions(options: DeepLinkOptions? = null): Boolean
     /**
      * Close the platform billing connection
      */
@@ -1962,7 +1962,7 @@ public interface MutationResolver {
     /**
      * Finish a transaction after validating receipts
      */
-    suspend fun finishTransaction(purchase: PurchaseInput, isConsumable: Boolean? = null): VoidResult
+    suspend fun finishTransaction(purchase: PurchaseInput, isConsumable: Boolean? = null): Boolean
     /**
      * Establish the platform billing connection
      */
@@ -1982,7 +1982,7 @@ public interface MutationResolver {
     /**
      * Restore completed purchases across platforms
      */
-    suspend fun restorePurchases(): VoidResult
+    suspend fun restorePurchases(): Boolean
     /**
      * Open subscription management UI and return changed purchases (iOS 15+)
      */
@@ -2093,14 +2093,14 @@ public typealias MutationAcknowledgePurchaseAndroidHandler = suspend (purchaseTo
 public typealias MutationBeginRefundRequestIOSHandler = suspend (sku: String) -> String?
 public typealias MutationClearTransactionIOSHandler = suspend () -> Boolean
 public typealias MutationConsumePurchaseAndroidHandler = suspend (purchaseToken: String) -> Boolean
-public typealias MutationDeepLinkToSubscriptionsHandler = suspend (options: DeepLinkOptions?) -> VoidResult
+public typealias MutationDeepLinkToSubscriptionsHandler = suspend (options: DeepLinkOptions?) -> Boolean
 public typealias MutationEndConnectionHandler = suspend () -> Boolean
-public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> VoidResult
+public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> Boolean
 public typealias MutationInitConnectionHandler = suspend () -> Boolean
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> Boolean
 public typealias MutationRequestPurchaseHandler = suspend (params: RequestPurchaseProps) -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> Boolean
-public typealias MutationRestorePurchasesHandler = suspend () -> VoidResult
+public typealias MutationRestorePurchasesHandler = suspend () -> Boolean
 public typealias MutationShowManageSubscriptionsIOSHandler = suspend () -> List<PurchaseIOS>
 public typealias MutationSyncIOSHandler = suspend () -> Boolean
 public typealias MutationValidateReceiptHandler = suspend (options: ReceiptValidationProps) -> ReceiptValidationResult
