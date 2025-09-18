@@ -226,6 +226,7 @@ export interface ProductAndroid extends ProductCommon {
   price?: (number | null);
   subscriptionOfferDetailsAndroid?: (ProductSubscriptionAndroidOfferDetails[] | null);
   title: string;
+  transactionId?: (string | null);
   type: ProductType;
 }
 
