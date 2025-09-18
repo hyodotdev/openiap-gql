@@ -42,6 +42,26 @@ This repo standardizes schema and identifier naming to improve clarity across pl
 ## Unions
 
 - Cross‑platform unions combine platform types (e.g., `Product = ProductAndroid | ProductIOS`).
+- When a wrapper object should behave like a union in generated code (e.g.,
+  `FetchProductsResult`, `RequestPurchaseResult`), precede the type definition
+  with a `# => Union` comment in the SDL:
+
+  ```graphql
+  # => Union
+  type RequestPurchaseResult {
+    purchase: Purchase
+    purchases: [Purchase!]
+  }
+  ```
+
+  The codegen scripts detect this marker and flatten the wrapper into the
+  appropriate union type in TypeScript/Dart/Swift/Kotlin outputs while keeping
+  the SDL schema intact.
+
+- Only `*Args` wrapper inputs (and `VoidResult`) are collapsed to inline
+  scalars in generated clients. Structural wrappers (e.g.,
+  `PricingPhasesAndroid`) stay as interfaces/structs even if they contain a
+  single field.
 
 ## SDL Organization Guidance
 

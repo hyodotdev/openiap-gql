@@ -168,6 +168,12 @@ const getNamedGraphQLType = (graphqlType) => {
 const getOperationReturnType = (graphqlType) => {
   const base = swiftTypeFor(graphqlType);
   const namedType = getNamedGraphQLType(graphqlType);
+  if (namedType && namedType.name === 'VoidResult') {
+    return {
+      type: 'Void',
+      optional: !(graphqlType instanceof GraphQLNonNull),
+    };
+  }
   if (!namedType) {
     return base;
   }
@@ -193,6 +199,31 @@ lines.push(
   'import Foundation',
   ''
 );
+
+const unionWrapperNames = new Set();
+for (const schemaPath of schemaPaths) {
+  let expectTypeName = false;
+  for (const line of readFileSync(schemaPath, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#') && trimmed.toLowerCase().includes('=> union')) {
+      expectTypeName = true;
+      continue;
+    }
+    if (expectTypeName) {
+      if (trimmed.length === 0) {
+        continue;
+      }
+      if (trimmed.startsWith('#')) {
+        continue;
+      }
+      const typeMatch = trimmed.match(/^type\s+([A-Za-z0-9_]+)/);
+      if (typeMatch) {
+        unionWrapperNames.add(typeMatch[1]);
+      }
+      expectTypeName = false;
+    }
+  }
+}
 
 const enums = [];
 const interfaces = [];
@@ -238,9 +269,29 @@ for (const name of typeNames) {
 const singleFieldObjects = new Map();
 for (const objectType of objects) {
   const fields = Object.values(objectType.getFields());
-  if (fields.length === 1) {
+  if (fields.length === 1 && objectType.name.endsWith('Args')) {
     singleFieldObjects.set(objectType.name, fields[0].type);
   }
+}
+
+const resultUnionObjects = new Map();
+for (const objectType of objects) {
+  if (!unionWrapperNames.has(objectType.name)) continue;
+  const fields = Object.values(objectType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+  if (fields.length === 0) continue;
+  const unionEntries = [];
+  let allOptional = true;
+  for (const field of fields) {
+    if (field.type instanceof GraphQLNonNull) {
+      allOptional = false;
+      break;
+    }
+    const { type, optional } = swiftTypeFor(field.type);
+    unionEntries.push({ field, type, optional });
+  }
+  if (!allOptional) continue;
+  if (unionEntries.length === 0) continue;
+  resultUnionObjects.set(objectType.name, unionEntries);
 }
 
 const printEnum = (enumType) => {
@@ -272,6 +323,22 @@ const printInterface = (interfaceType) => {
 };
 
 const printObject = (objectType) => {
+  if (objectType.name === 'VoidResult') {
+    lines.push('public typealias VoidResult = Void', '');
+    return;
+  }
+  if (resultUnionObjects.has(objectType.name)) {
+    addDocComment(lines, objectType.description);
+    lines.push(`public enum ${objectType.name} {`);
+    const unionEntries = resultUnionObjects.get(objectType.name);
+    unionEntries.forEach(({ field, type, optional }) => {
+      const caseName = escapeSwiftName(lowerCamelCase(field.name));
+      const payloadType = type + (optional ? '?' : '');
+      lines.push(`    case ${caseName}(${payloadType})`);
+    });
+    lines.push('}', '');
+    return;
+  }
   addDocComment(lines, objectType.description);
   const interfacesForObject = objectType.getInterfaces();
   const conformances = ['Codable', ...interfacesForObject.map((iface) => iface.name)];

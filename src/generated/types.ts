@@ -126,10 +126,7 @@ export enum ErrorCode {
   UserError = 'USER_ERROR'
 }
 
-export interface FetchProductsResult {
-  products?: (Product[] | null);
-  subscriptions?: (ProductSubscription[] | null);
-}
+export type FetchProductsResult = Product[] | ProductSubscription[] | null;
 
 export type IapEvent = 'promoted-product-ios' | 'purchase-error' | 'purchase-updated';
 
@@ -145,21 +142,21 @@ export interface Mutation {
   /** Consume a purchase token so it can be repurchased */
   consumePurchaseAndroid: Promise<boolean>;
   /** Open the native subscription management surface */
-  deepLinkToSubscriptions: Promise<VoidResult>;
+  deepLinkToSubscriptions: Promise<void>;
   /** Close the platform billing connection */
   endConnection: Promise<boolean>;
   /** Finish a transaction after validating receipts */
-  finishTransaction: Promise<VoidResult>;
+  finishTransaction: Promise<void>;
   /** Establish the platform billing connection */
   initConnection: Promise<boolean>;
   /** Present the App Store code redemption sheet */
   presentCodeRedemptionSheetIOS: Promise<boolean>;
   /** Initiate a purchase flow; rely on events for final state */
-  requestPurchase?: Promise<(RequestPurchaseResult | null)>;
+  requestPurchase?: Promise<(Purchase | Purchase[] | null)>;
   /** Purchase the promoted product surfaced by the App Store */
   requestPurchaseOnPromotedProductIOS: Promise<boolean>;
   /** Restore completed purchases across platforms */
-  restorePurchases: Promise<VoidResult>;
+  restorePurchases: Promise<void>;
   /** Open subscription management UI and return changed purchases (iOS 15+) */
   showManageSubscriptionsIOS: Promise<PurchaseIOS[]>;
   /** Force a StoreKit sync for transactions (iOS 15+) */
@@ -172,15 +169,11 @@ export interface Mutation {
 
 export type MutationAcknowledgePurchaseAndroidArgs = string;
 
-
 export type MutationBeginRefundRequestIosArgs = string;
-
 
 export type MutationConsumePurchaseAndroidArgs = string;
 
-
 export type MutationDeepLinkToSubscriptionsArgs = (DeepLinkOptions | null) | undefined;
-
 
 export interface MutationFinishTransactionArgs {
   isConsumable?: (boolean | null);
@@ -441,7 +434,7 @@ export interface Query {
   /** Get current StoreKit 2 entitlements (iOS 15+) */
   currentEntitlementIOS?: Promise<(PurchaseIOS | null)>;
   /** Retrieve products or subscriptions from the store */
-  fetchProducts: Promise<FetchProductsResult>;
+  fetchProducts: Promise<(Product[] | ProductSubscription[] | null)>;
   /** Get active subscriptions (filters by subscriptionIds when provided) */
   getActiveSubscriptions: Promise<ActiveSubscription[]>;
   /** Fetch the current app transaction (iOS 16+) */
@@ -476,33 +469,23 @@ export interface Query {
 
 export type QueryCurrentEntitlementIosArgs = string;
 
-
 export type QueryFetchProductsArgs = ProductRequest;
-
 
 export type QueryGetActiveSubscriptionsArgs = (string[] | null) | undefined;
 
-
 export type QueryGetAvailablePurchasesArgs = (PurchaseOptions | null) | undefined;
-
 
 export type QueryGetTransactionJwsIosArgs = string;
 
-
 export type QueryHasActiveSubscriptionsArgs = (string[] | null) | undefined;
-
 
 export type QueryIsEligibleForIntroOfferIosArgs = string;
 
-
 export type QueryIsTransactionVerifiedIosArgs = string;
-
 
 export type QueryLatestTransactionIosArgs = string;
 
-
 export type QuerySubscriptionStatusIosArgs = string;
-
 
 export type QueryValidateReceiptIosArgs = ReceiptValidationProps;
 
@@ -608,10 +591,7 @@ export interface RequestPurchasePropsByPlatforms {
   ios?: (RequestPurchaseIosProps | null);
 }
 
-export interface RequestPurchaseResult {
-  purchase?: (Purchase | null);
-  purchases?: (Purchase[] | null);
-}
+export type RequestPurchaseResult = Purchase | Purchase[] | null;
 
 export interface RequestSubscriptionAndroidProps {
   /** Personalized offer flag */
@@ -686,9 +666,8 @@ export interface SubscriptionStatusIOS {
   state: string;
 }
 
-export interface VoidResult {
-  success: boolean;
-}
+export type VoidResult = void;
+
 // -- Query helper types (auto-generated)
 export type QueryArgsMap = {
   currentEntitlementIOS: QueryCurrentEntitlementIosArgs;

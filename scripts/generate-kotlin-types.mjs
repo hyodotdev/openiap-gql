@@ -125,6 +125,31 @@ const objects = [];
 const inputs = [];
 const operationTypes = [];
 
+const unionWrapperNames = new Set();
+for (const schemaPath of schemaPaths) {
+  let expectTypeName = false;
+  for (const line of readFileSync(schemaPath, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#') && trimmed.toLowerCase().includes('=> union')) {
+      expectTypeName = true;
+      continue;
+    }
+    if (expectTypeName) {
+      if (trimmed.length === 0) {
+        continue;
+      }
+      if (trimmed.startsWith('#')) {
+        continue;
+      }
+      const typeMatch = trimmed.match(/^type\s+([A-Za-z0-9_]+)/);
+      if (typeMatch) {
+        unionWrapperNames.add(typeMatch[1]);
+      }
+      expectTypeName = false;
+    }
+  }
+}
+
 for (const name of typeNames) {
   const type = typeMap[name];
   if (isScalarType(type)) {
@@ -181,7 +206,7 @@ for (const unionType of unions) {
 const singleFieldObjects = new Map();
 for (const objectType of objects) {
   const fields = Object.values(objectType.getFields());
-  if (fields.length === 1) {
+  if (fields.length === 1 && objectType.name.endsWith('Args')) {
     singleFieldObjects.set(objectType.name, fields[0].type);
   }
 }
@@ -231,6 +256,26 @@ const getKotlinType = (graphqlType) => {
   return { type: metadata.kotlinType, nullable: metadata.nullable, metadata };
 };
 
+const resultUnionObjects = new Map();
+for (const objectType of objects) {
+  const fields = Object.values(objectType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+  if (fields.length === 0) continue;
+  if (!unionWrapperNames.has(objectType.name)) continue;
+  const unionEntries = [];
+  let allOptional = true;
+  for (const field of fields) {
+    if (field.type instanceof GraphQLNonNull) {
+      allOptional = false;
+      break;
+    }
+    const { type, nullable } = getKotlinType(field.type);
+    unionEntries.push({ field, type, nullable });
+  }
+  if (!allOptional) continue;
+  if (unionEntries.length === 0) continue;
+  resultUnionObjects.set(objectType.name, unionEntries);
+}
+
 const unwrapNonNull = (graphqlType) => {
   let current = graphqlType;
   while (current instanceof GraphQLNonNull) {
@@ -255,6 +300,13 @@ const getOperationReturnType = (graphqlType) => {
     return base;
   }
   const namedType = getNamedGraphQLType(graphqlType);
+  if (namedType && namedType.name === 'VoidResult') {
+    return {
+      type: 'Unit',
+      nullable: isNullableGraphQLType(graphqlType),
+      metadata: base.metadata,
+    };
+  }
   if (!namedType) {
     return base;
   }
@@ -385,6 +437,21 @@ const printInterface = (interfaceType) => {
 };
 
 const printDataClass = (objectType) => {
+  if (objectType.name === 'VoidResult') {
+    lines.push('public typealias VoidResult = Unit', '');
+    return;
+  }
+  if (resultUnionObjects.has(objectType.name)) {
+    addDocComment(lines, objectType.description);
+    lines.push(`public sealed interface ${objectType.name}`, '');
+    const unionEntries = resultUnionObjects.get(objectType.name);
+    unionEntries.forEach(({ field, type, nullable }) => {
+      const className = `${objectType.name}${capitalize(field.name)}`;
+      const propertyType = `${type}${nullable ? '?' : ''}`;
+      lines.push(`public data class ${className}(val value: ${propertyType}) : ${objectType.name}`, '');
+    });
+    return;
+  }
   addDocComment(lines, objectType.description);
   const interfacesForObject = objectType.getInterfaces().map((iface) => iface.name);
   const unionInterfaces = unionMembership.has(objectType.name)
