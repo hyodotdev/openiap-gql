@@ -1001,3 +1001,167 @@ public protocol SubscriptionResolver {
     /// Fires when a purchase completes successfully or a pending purchase resolves
     func purchaseUpdated() async throws -> Purchase
 }
+
+// MARK: - Root Operation Helpers
+
+// MARK: - Mutation Helpers
+
+public typealias MutationAcknowledgePurchaseAndroidHandler = (_ purchaseToken: String) async throws -> VoidResult
+public typealias MutationBeginRefundRequestIOSHandler = (_ sku: String) async throws -> RefundResultIOS
+public typealias MutationClearTransactionIOSHandler = () async throws -> VoidResult
+public typealias MutationConsumePurchaseAndroidHandler = (_ purchaseToken: String) async throws -> VoidResult
+public typealias MutationDeepLinkToSubscriptionsHandler = (_ options: DeepLinkOptions?) async throws -> VoidResult
+public typealias MutationEndConnectionHandler = () async throws -> Bool
+public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, _ isConsumable: Bool?) async throws -> VoidResult
+public typealias MutationInitConnectionHandler = () async throws -> Bool
+public typealias MutationPresentCodeRedemptionSheetIOSHandler = () async throws -> VoidResult
+public typealias MutationRequestPurchaseHandler = (_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
+public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = () async throws -> PurchaseIOS
+public typealias MutationRestorePurchasesHandler = () async throws -> VoidResult
+public typealias MutationShowManageSubscriptionsIOSHandler = () async throws -> [PurchaseIOS]
+public typealias MutationSyncIOSHandler = () async throws -> VoidResult
+public typealias MutationValidateReceiptHandler = (_ options: ReceiptValidationProps) async throws -> ReceiptValidationResult
+
+public struct MutationHandlers {
+    public var acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler?
+    public var beginRefundRequestIOS: MutationBeginRefundRequestIOSHandler?
+    public var clearTransactionIOS: MutationClearTransactionIOSHandler?
+    public var consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler?
+    public var deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler?
+    public var endConnection: MutationEndConnectionHandler?
+    public var finishTransaction: MutationFinishTransactionHandler?
+    public var initConnection: MutationInitConnectionHandler?
+    public var presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler?
+    public var requestPurchase: MutationRequestPurchaseHandler?
+    public var requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler?
+    public var restorePurchases: MutationRestorePurchasesHandler?
+    public var showManageSubscriptionsIOS: MutationShowManageSubscriptionsIOSHandler?
+    public var syncIOS: MutationSyncIOSHandler?
+    public var validateReceipt: MutationValidateReceiptHandler?
+
+    public init(
+        acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler? = nil,
+        beginRefundRequestIOS: MutationBeginRefundRequestIOSHandler? = nil,
+        clearTransactionIOS: MutationClearTransactionIOSHandler? = nil,
+        consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler? = nil,
+        deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler? = nil,
+        endConnection: MutationEndConnectionHandler? = nil,
+        finishTransaction: MutationFinishTransactionHandler? = nil,
+        initConnection: MutationInitConnectionHandler? = nil,
+        presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler? = nil,
+        requestPurchase: MutationRequestPurchaseHandler? = nil,
+        requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = nil,
+        restorePurchases: MutationRestorePurchasesHandler? = nil,
+        showManageSubscriptionsIOS: MutationShowManageSubscriptionsIOSHandler? = nil,
+        syncIOS: MutationSyncIOSHandler? = nil,
+        validateReceipt: MutationValidateReceiptHandler? = nil
+    ) {
+        self.acknowledgePurchaseAndroid = acknowledgePurchaseAndroid
+        self.beginRefundRequestIOS = beginRefundRequestIOS
+        self.clearTransactionIOS = clearTransactionIOS
+        self.consumePurchaseAndroid = consumePurchaseAndroid
+        self.deepLinkToSubscriptions = deepLinkToSubscriptions
+        self.endConnection = endConnection
+        self.finishTransaction = finishTransaction
+        self.initConnection = initConnection
+        self.presentCodeRedemptionSheetIOS = presentCodeRedemptionSheetIOS
+        self.requestPurchase = requestPurchase
+        self.requestPurchaseOnPromotedProductIOS = requestPurchaseOnPromotedProductIOS
+        self.restorePurchases = restorePurchases
+        self.showManageSubscriptionsIOS = showManageSubscriptionsIOS
+        self.syncIOS = syncIOS
+        self.validateReceipt = validateReceipt
+    }
+}
+
+// MARK: - Query Helpers
+
+public typealias QueryCurrentEntitlementIOSHandler = (_ skus: [String]?) async throws -> [EntitlementIOS]
+public typealias QueryFetchProductsHandler = (_ params: ProductRequest) async throws -> FetchProductsResult
+public typealias QueryGetActiveSubscriptionsHandler = (_ subscriptionIds: [String]?) async throws -> [ActiveSubscription]
+public typealias QueryGetAppTransactionIOSHandler = () async throws -> AppTransaction?
+public typealias QueryGetAvailablePurchasesHandler = (_ options: PurchaseOptions?) async throws -> [Purchase]
+public typealias QueryGetPendingTransactionsIOSHandler = () async throws -> [PurchaseIOS]
+public typealias QueryGetPromotedProductIOSHandler = () async throws -> ProductIOS?
+public typealias QueryGetReceiptDataIOSHandler = () async throws -> String
+public typealias QueryGetStorefrontIOSHandler = () async throws -> String
+public typealias QueryGetTransactionJwsIOSHandler = (_ transactionId: String) async throws -> String
+public typealias QueryHasActiveSubscriptionsHandler = (_ subscriptionIds: [String]?) async throws -> Bool
+public typealias QueryIsEligibleForIntroOfferIOSHandler = (_ productIds: [String]) async throws -> Bool
+public typealias QueryIsTransactionVerifiedIOSHandler = (_ transactionId: String) async throws -> Bool
+public typealias QueryLatestTransactionIOSHandler = (_ sku: String) async throws -> PurchaseIOS?
+public typealias QuerySubscriptionStatusIOSHandler = (_ skus: [String]?) async throws -> [SubscriptionStatusIOS]
+
+public struct QueryHandlers {
+    public var currentEntitlementIOS: QueryCurrentEntitlementIOSHandler?
+    public var fetchProducts: QueryFetchProductsHandler?
+    public var getActiveSubscriptions: QueryGetActiveSubscriptionsHandler?
+    public var getAppTransactionIOS: QueryGetAppTransactionIOSHandler?
+    public var getAvailablePurchases: QueryGetAvailablePurchasesHandler?
+    public var getPendingTransactionsIOS: QueryGetPendingTransactionsIOSHandler?
+    public var getPromotedProductIOS: QueryGetPromotedProductIOSHandler?
+    public var getReceiptDataIOS: QueryGetReceiptDataIOSHandler?
+    public var getStorefrontIOS: QueryGetStorefrontIOSHandler?
+    public var getTransactionJwsIOS: QueryGetTransactionJwsIOSHandler?
+    public var hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler?
+    public var isEligibleForIntroOfferIOS: QueryIsEligibleForIntroOfferIOSHandler?
+    public var isTransactionVerifiedIOS: QueryIsTransactionVerifiedIOSHandler?
+    public var latestTransactionIOS: QueryLatestTransactionIOSHandler?
+    public var subscriptionStatusIOS: QuerySubscriptionStatusIOSHandler?
+
+    public init(
+        currentEntitlementIOS: QueryCurrentEntitlementIOSHandler? = nil,
+        fetchProducts: QueryFetchProductsHandler? = nil,
+        getActiveSubscriptions: QueryGetActiveSubscriptionsHandler? = nil,
+        getAppTransactionIOS: QueryGetAppTransactionIOSHandler? = nil,
+        getAvailablePurchases: QueryGetAvailablePurchasesHandler? = nil,
+        getPendingTransactionsIOS: QueryGetPendingTransactionsIOSHandler? = nil,
+        getPromotedProductIOS: QueryGetPromotedProductIOSHandler? = nil,
+        getReceiptDataIOS: QueryGetReceiptDataIOSHandler? = nil,
+        getStorefrontIOS: QueryGetStorefrontIOSHandler? = nil,
+        getTransactionJwsIOS: QueryGetTransactionJwsIOSHandler? = nil,
+        hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler? = nil,
+        isEligibleForIntroOfferIOS: QueryIsEligibleForIntroOfferIOSHandler? = nil,
+        isTransactionVerifiedIOS: QueryIsTransactionVerifiedIOSHandler? = nil,
+        latestTransactionIOS: QueryLatestTransactionIOSHandler? = nil,
+        subscriptionStatusIOS: QuerySubscriptionStatusIOSHandler? = nil
+    ) {
+        self.currentEntitlementIOS = currentEntitlementIOS
+        self.fetchProducts = fetchProducts
+        self.getActiveSubscriptions = getActiveSubscriptions
+        self.getAppTransactionIOS = getAppTransactionIOS
+        self.getAvailablePurchases = getAvailablePurchases
+        self.getPendingTransactionsIOS = getPendingTransactionsIOS
+        self.getPromotedProductIOS = getPromotedProductIOS
+        self.getReceiptDataIOS = getReceiptDataIOS
+        self.getStorefrontIOS = getStorefrontIOS
+        self.getTransactionJwsIOS = getTransactionJwsIOS
+        self.hasActiveSubscriptions = hasActiveSubscriptions
+        self.isEligibleForIntroOfferIOS = isEligibleForIntroOfferIOS
+        self.isTransactionVerifiedIOS = isTransactionVerifiedIOS
+        self.latestTransactionIOS = latestTransactionIOS
+        self.subscriptionStatusIOS = subscriptionStatusIOS
+    }
+}
+
+// MARK: - Subscription Helpers
+
+public typealias SubscriptionPromotedProductIOSHandler = () async throws -> String
+public typealias SubscriptionPurchaseErrorHandler = () async throws -> PurchaseError
+public typealias SubscriptionPurchaseUpdatedHandler = () async throws -> Purchase
+
+public struct SubscriptionHandlers {
+    public var promotedProductIOS: SubscriptionPromotedProductIOSHandler?
+    public var purchaseError: SubscriptionPurchaseErrorHandler?
+    public var purchaseUpdated: SubscriptionPurchaseUpdatedHandler?
+
+    public init(
+        promotedProductIOS: SubscriptionPromotedProductIOSHandler? = nil,
+        purchaseError: SubscriptionPurchaseErrorHandler? = nil,
+        purchaseUpdated: SubscriptionPurchaseUpdatedHandler? = nil
+    ) {
+        self.promotedProductIOS = promotedProductIOS
+        self.purchaseError = purchaseError
+        self.purchaseUpdated = purchaseUpdated
+    }
+}

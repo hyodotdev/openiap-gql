@@ -222,4 +222,89 @@ wrapReturns('Mutation');
 
 content = content.replace(/^\s*_placeholder\??: [^;]+;\n/gm, '');
 
+const ROOT_DEFINITIONS = ['Query', 'Mutation', 'Subscription'];
+
+const helperMarkers = (root) => ({
+  start: `// -- ${root} helper types (auto-generated)`,
+  end: `// -- End ${root.toLowerCase()} helper types`,
+});
+
+const removeRootHelpers = (root) => {
+  const { start, end } = helperMarkers(root);
+  const startIdx = content.indexOf(start);
+  if (startIdx === -1) return;
+  const endIdx = content.indexOf(end);
+  if (endIdx === -1) return;
+  const sliceEnd = content.indexOf('\n', endIdx + end.length);
+  const finalEnd = sliceEnd === -1 ? content.length : sliceEnd + 1;
+  content = content.slice(0, startIdx) + content.slice(finalEnd);
+};
+
+const findArgsType = (root, pascalFieldName) => {
+  const prefixes = new Set([
+    `${root}${pascalFieldName}Args`,
+    `${root}${pascalFieldName.replace(/IOS/g, 'Ios')}Args`,
+    `${root}${pascalFieldName.replace(/Ios/g, 'IOS')}Args`,
+  ]);
+  for (const name of prefixes) {
+    if (content.includes(`export interface ${name} {`)) {
+      return name;
+    }
+  }
+  return 'never';
+};
+
+const buildRootHelpers = (root) => {
+  const rootMatch = content.match(new RegExp(`export interface ${root} {\n([\\s\\S]*?)\n}\n`));
+  if (!rootMatch) return '';
+  const body = rootMatch[1];
+  const fieldPattern = /^\s*([A-Za-z0-9_]+)\??:\s*[^;]+;$/gm;
+  const entries = [];
+  let fieldMatch;
+  while ((fieldMatch = fieldPattern.exec(body)) !== null) {
+    const fieldName = fieldMatch[1];
+    const pascal = fieldName[0].toUpperCase() + fieldName.slice(1);
+    const argsType = findArgsType(root, pascal);
+    entries.push({ fieldName, argsType });
+  }
+  if (entries.length === 0) return '';
+  const { start, end } = helperMarkers(root);
+  const mapName = `${root}ArgsMap`;
+  const fieldAlias = `${root}Field`;
+  const mapAlias = `${root}FieldMap`;
+  const lines = [];
+  lines.push(start);
+  lines.push(`export type ${mapName} = {`);
+  for (const { fieldName, argsType } of entries) {
+    lines.push(`  ${fieldName}: ${argsType};`);
+  }
+  lines.push('};');
+  lines.push('');
+  lines.push(`export type ${fieldAlias}<K extends keyof ${root}> =`);
+  lines.push(`  ${mapName}[K] extends never`);
+  lines.push(`    ? () => NonNullable<${root}[K]>`);
+  lines.push(`    : (args: ${mapName}[K]) => NonNullable<${root}[K]>;`);
+  lines.push('');
+  lines.push(`export type ${mapAlias} = {`);
+  lines.push(`  [K in keyof ${root}]?: ${fieldAlias}<K>;`);
+  lines.push('};');
+  lines.push(end);
+  lines.push('');
+  return lines.join('\n');
+};
+
+const helperBlocks = [];
+for (const root of ROOT_DEFINITIONS) {
+  removeRootHelpers(root);
+  const block = buildRootHelpers(root);
+  if (block) helperBlocks.push(block);
+}
+
+if (helperBlocks.length > 0) {
+  if (!content.endsWith('\n')) {
+    content += '\n';
+  }
+  content += helperBlocks.join('\n');
+}
+
 writeFileSync(targetPath, content);

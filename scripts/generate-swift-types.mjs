@@ -111,6 +111,8 @@ const lowerCamelCase = (value) => {
   return parts[0] + parts.slice(1).map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1)).join('');
 };
 
+const capitalize = (value) => (value.length === 0 ? value : value.charAt(0).toUpperCase() + value.slice(1));
+
 const toConstantCase = (value) => value
   .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
   .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
@@ -431,6 +433,51 @@ const printOperationProtocol = (operationType) => {
   lines.push('}', '');
 };
 
+const printOperationHelpers = (operationType) => {
+  const rootName = operationType.name;
+  const fields = Object.values(operationType.getFields())
+    .filter((field) => field.name !== '_placeholder')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (fields.length === 0) return;
+
+  lines.push(`// MARK: - ${rootName} Helpers`, '');
+
+  fields.forEach((field) => {
+    const aliasName = `${rootName}${capitalize(field.name)}Handler`;
+    const { type, optional } = swiftTypeFor(field.type);
+    const returnType = type + (optional ? '?' : '');
+    if (field.args.length === 0) {
+      lines.push(`public typealias ${aliasName} = () async throws -> ${returnType}`);
+      return;
+    }
+    const params = field.args.map((arg) => {
+      const { type: argType, optional: argOptional } = swiftTypeFor(arg.type);
+      const finalType = argType + (argOptional ? '?' : '');
+      return `_ ${escapeSwiftName(arg.name)}: ${finalType}`;
+    }).join(', ');
+    lines.push(`public typealias ${aliasName} = (${params}) async throws -> ${returnType}`);
+  });
+
+  const structName = `${rootName}Handlers`;
+  lines.push('', `public struct ${structName} {`);
+  fields.forEach((field) => {
+    const aliasName = `${rootName}${capitalize(field.name)}Handler`;
+    lines.push(`    public var ${escapeSwiftName(field.name)}: ${aliasName}?`);
+  });
+  lines.push('');
+  const initParams = fields.map((field) => {
+    const aliasName = `${rootName}${capitalize(field.name)}Handler`;
+    return `${escapeSwiftName(field.name)}: ${aliasName}? = nil`;
+  }).join(',\n        ');
+  lines.push('    public init(' + (fields.length ? `\n        ${initParams}\n    ` : '') + ') {');
+  fields.forEach((field) => {
+    const propertyName = escapeSwiftName(field.name);
+    lines.push(`        self.${propertyName} = ${propertyName}`);
+  });
+  lines.push('    }');
+  lines.push('}', '');
+};
+
 if (enums.length) {
   lines.push('// MARK: - Enums', '');
   enums.sort((a, b) => a.name.localeCompare(b.name)).forEach(printEnum);
@@ -459,6 +506,11 @@ if (unions.length) {
 if (operations.length) {
   lines.push('// MARK: - Root Operations', '');
   operations.sort((a, b) => a.name.localeCompare(b.name)).forEach(printOperationProtocol);
+}
+
+if (operations.length) {
+  lines.push('// MARK: - Root Operation Helpers', '');
+  operations.sort((a, b) => a.name.localeCompare(b.name)).forEach(printOperationHelpers);
 }
 
 const outputPath = resolve(__dirname, '../src/generated/Types.swift');

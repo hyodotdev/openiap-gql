@@ -538,6 +538,42 @@ const printOperationInterface = (operationType) => {
   lines.push('}', '');
 };
 
+const printOperationHelpers = (operationType) => {
+  const rootName = operationType.name;
+  const fields = Object.values(operationType.getFields())
+    .filter((field) => field.name !== '_placeholder')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (fields.length === 0) return;
+
+  lines.push(`// MARK: - ${rootName} Helpers`, '');
+
+  fields.forEach((field) => {
+    const aliasName = `${rootName}${capitalize(field.name)}Handler`;
+    const { type, nullable } = getKotlinType(field.type);
+    const returnType = type + (nullable ? '?' : '');
+    if (field.args.length === 0) {
+      lines.push(`public typealias ${aliasName} = suspend () -> ${returnType}`);
+      return;
+    }
+    const argsSignature = field.args.map((arg) => {
+      const { type: argType, nullable: argNullable } = getKotlinType(arg.type);
+      const argumentType = argType + (argNullable ? '?' : '');
+      return `${escapeKotlinName(arg.name)}: ${argumentType}`;
+    }).join(', ');
+    lines.push(`public typealias ${aliasName} = suspend (${argsSignature}) -> ${returnType}`);
+  });
+
+  const helperClass = `${rootName}Handlers`;
+  lines.push('', `public data class ${helperClass}(`);
+  fields.forEach((field, index) => {
+    const aliasName = `${rootName}${capitalize(field.name)}Handler`;
+    const propertyName = escapeKotlinName(field.name);
+    const suffix = index === fields.length - 1 ? '' : ',';
+    lines.push(`    val ${propertyName}: ${aliasName}? = null${suffix}`);
+  });
+  lines.push(')', '');
+};
+
 if (enums.length) {
   lines.push('// MARK: - Enums', '');
   enums.sort((a, b) => a.name.localeCompare(b.name)).forEach(printEnum);
@@ -566,6 +602,11 @@ if (unions.length) {
 if (operationTypes.length) {
   lines.push('// MARK: - Root Operations', '');
   operationTypes.sort((a, b) => a.name.localeCompare(b.name)).forEach(printOperationInterface);
+}
+
+if (operationTypes.length) {
+  lines.push('// MARK: - Root Operation Helpers', '');
+  operationTypes.sort((a, b) => a.name.localeCompare(b.name)).forEach(printOperationHelpers);
 }
 
 const outputPath = resolve(__dirname, '../src/generated/Types.kt');

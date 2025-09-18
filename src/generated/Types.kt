@@ -2080,3 +2080,89 @@ public interface SubscriptionResolver {
      */
     suspend fun purchaseUpdated(): Purchase
 }
+
+// MARK: - Root Operation Helpers
+
+// MARK: - Mutation Helpers
+
+public typealias MutationAcknowledgePurchaseAndroidHandler = suspend (purchaseToken: String) -> VoidResult
+public typealias MutationBeginRefundRequestIOSHandler = suspend (sku: String) -> RefundResultIOS
+public typealias MutationClearTransactionIOSHandler = suspend () -> VoidResult
+public typealias MutationConsumePurchaseAndroidHandler = suspend (purchaseToken: String) -> VoidResult
+public typealias MutationDeepLinkToSubscriptionsHandler = suspend (options: DeepLinkOptions?) -> VoidResult
+public typealias MutationEndConnectionHandler = suspend () -> Boolean
+public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> VoidResult
+public typealias MutationInitConnectionHandler = suspend () -> Boolean
+public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> VoidResult
+public typealias MutationRequestPurchaseHandler = suspend (params: RequestPurchaseProps) -> RequestPurchaseResult?
+public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> PurchaseIOS
+public typealias MutationRestorePurchasesHandler = suspend () -> VoidResult
+public typealias MutationShowManageSubscriptionsIOSHandler = suspend () -> List<PurchaseIOS>
+public typealias MutationSyncIOSHandler = suspend () -> VoidResult
+public typealias MutationValidateReceiptHandler = suspend (options: ReceiptValidationProps) -> ReceiptValidationResult
+
+public data class MutationHandlers(
+    val acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler? = null,
+    val beginRefundRequestIOS: MutationBeginRefundRequestIOSHandler? = null,
+    val clearTransactionIOS: MutationClearTransactionIOSHandler? = null,
+    val consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler? = null,
+    val deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler? = null,
+    val endConnection: MutationEndConnectionHandler? = null,
+    val finishTransaction: MutationFinishTransactionHandler? = null,
+    val initConnection: MutationInitConnectionHandler? = null,
+    val presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler? = null,
+    val requestPurchase: MutationRequestPurchaseHandler? = null,
+    val requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = null,
+    val restorePurchases: MutationRestorePurchasesHandler? = null,
+    val showManageSubscriptionsIOS: MutationShowManageSubscriptionsIOSHandler? = null,
+    val syncIOS: MutationSyncIOSHandler? = null,
+    val validateReceipt: MutationValidateReceiptHandler? = null
+)
+
+// MARK: - Query Helpers
+
+public typealias QueryCurrentEntitlementIOSHandler = suspend (skus: List<String>?) -> List<EntitlementIOS>
+public typealias QueryFetchProductsHandler = suspend (params: ProductRequest) -> FetchProductsResult
+public typealias QueryGetActiveSubscriptionsHandler = suspend (subscriptionIds: List<String>?) -> List<ActiveSubscription>
+public typealias QueryGetAppTransactionIOSHandler = suspend () -> AppTransaction?
+public typealias QueryGetAvailablePurchasesHandler = suspend (options: PurchaseOptions?) -> List<Purchase>
+public typealias QueryGetPendingTransactionsIOSHandler = suspend () -> List<PurchaseIOS>
+public typealias QueryGetPromotedProductIOSHandler = suspend () -> ProductIOS?
+public typealias QueryGetReceiptDataIOSHandler = suspend () -> String
+public typealias QueryGetStorefrontIOSHandler = suspend () -> String
+public typealias QueryGetTransactionJwsIOSHandler = suspend (transactionId: String) -> String
+public typealias QueryHasActiveSubscriptionsHandler = suspend (subscriptionIds: List<String>?) -> Boolean
+public typealias QueryIsEligibleForIntroOfferIOSHandler = suspend (productIds: List<String>) -> Boolean
+public typealias QueryIsTransactionVerifiedIOSHandler = suspend (transactionId: String) -> Boolean
+public typealias QueryLatestTransactionIOSHandler = suspend (sku: String) -> PurchaseIOS?
+public typealias QuerySubscriptionStatusIOSHandler = suspend (skus: List<String>?) -> List<SubscriptionStatusIOS>
+
+public data class QueryHandlers(
+    val currentEntitlementIOS: QueryCurrentEntitlementIOSHandler? = null,
+    val fetchProducts: QueryFetchProductsHandler? = null,
+    val getActiveSubscriptions: QueryGetActiveSubscriptionsHandler? = null,
+    val getAppTransactionIOS: QueryGetAppTransactionIOSHandler? = null,
+    val getAvailablePurchases: QueryGetAvailablePurchasesHandler? = null,
+    val getPendingTransactionsIOS: QueryGetPendingTransactionsIOSHandler? = null,
+    val getPromotedProductIOS: QueryGetPromotedProductIOSHandler? = null,
+    val getReceiptDataIOS: QueryGetReceiptDataIOSHandler? = null,
+    val getStorefrontIOS: QueryGetStorefrontIOSHandler? = null,
+    val getTransactionJwsIOS: QueryGetTransactionJwsIOSHandler? = null,
+    val hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler? = null,
+    val isEligibleForIntroOfferIOS: QueryIsEligibleForIntroOfferIOSHandler? = null,
+    val isTransactionVerifiedIOS: QueryIsTransactionVerifiedIOSHandler? = null,
+    val latestTransactionIOS: QueryLatestTransactionIOSHandler? = null,
+    val subscriptionStatusIOS: QuerySubscriptionStatusIOSHandler? = null
+)
+
+// MARK: - Subscription Helpers
+
+public typealias SubscriptionPromotedProductIOSHandler = suspend () -> String
+public typealias SubscriptionPurchaseErrorHandler = suspend () -> PurchaseError
+public typealias SubscriptionPurchaseUpdatedHandler = suspend () -> Purchase
+
+public data class SubscriptionHandlers(
+    val promotedProductIOS: SubscriptionPromotedProductIOSHandler? = null,
+    val purchaseError: SubscriptionPurchaseErrorHandler? = null,
+    val purchaseUpdated: SubscriptionPurchaseUpdatedHandler? = null
+)
