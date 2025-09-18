@@ -137,13 +137,13 @@ export type IapPlatform = 'android' | 'ios';
 
 export interface Mutation {
   /** Acknowledge a non-consumable purchase or subscription */
-  acknowledgePurchaseAndroid: Promise<VoidResult>;
+  acknowledgePurchaseAndroid: Promise<boolean>;
   /** Initiate a refund request for a product (iOS 15+) */
-  beginRefundRequestIOS: Promise<RefundResultIOS>;
+  beginRefundRequestIOS?: Promise<(string | null)>;
   /** Clear pending transactions from the StoreKit payment queue */
-  clearTransactionIOS: Promise<VoidResult>;
+  clearTransactionIOS: Promise<boolean>;
   /** Consume a purchase token so it can be repurchased */
-  consumePurchaseAndroid: Promise<VoidResult>;
+  consumePurchaseAndroid: Promise<boolean>;
   /** Open the native subscription management surface */
   deepLinkToSubscriptions: Promise<VoidResult>;
   /** Close the platform billing connection */
@@ -153,17 +153,17 @@ export interface Mutation {
   /** Establish the platform billing connection */
   initConnection: Promise<boolean>;
   /** Present the App Store code redemption sheet */
-  presentCodeRedemptionSheetIOS: Promise<VoidResult>;
+  presentCodeRedemptionSheetIOS: Promise<boolean>;
   /** Initiate a purchase flow; rely on events for final state */
   requestPurchase?: Promise<(RequestPurchaseResult | null)>;
   /** Purchase the promoted product surfaced by the App Store */
-  requestPurchaseOnPromotedProductIOS: Promise<PurchaseIOS>;
+  requestPurchaseOnPromotedProductIOS: Promise<boolean>;
   /** Restore completed purchases across platforms */
   restorePurchases: Promise<VoidResult>;
   /** Open subscription management UI and return changed purchases (iOS 15+) */
   showManageSubscriptionsIOS: Promise<PurchaseIOS[]>;
   /** Force a StoreKit sync for transactions (iOS 15+) */
-  syncIOS: Promise<VoidResult>;
+  syncIOS: Promise<boolean>;
   /** Validate purchase receipts with the configured providers */
   validateReceipt: Promise<ReceiptValidationResult>;
 }
@@ -440,7 +440,7 @@ export type PurchaseState = 'deferred' | 'failed' | 'pending' | 'purchased' | 'r
 
 export interface Query {
   /** Get current StoreKit 2 entitlements (iOS 15+) */
-  currentEntitlementIOS: Promise<EntitlementIOS[]>;
+  currentEntitlementIOS?: Promise<(PurchaseIOS | null)>;
   /** Retrieve products or subscriptions from the store */
   fetchProducts: Promise<FetchProductsResult>;
   /** Get active subscriptions (filters by subscriptionIds when provided) */
@@ -454,14 +454,14 @@ export interface Query {
   /** Get the currently promoted product (iOS 11+) */
   getPromotedProductIOS?: Promise<(ProductIOS | null)>;
   /** Get base64-encoded receipt data for validation */
-  getReceiptDataIOS: Promise<string>;
+  getReceiptDataIOS?: Promise<(string | null)>;
   /** Get the current App Store storefront country code */
   getStorefrontIOS: Promise<string>;
   /** Get the transaction JWS (StoreKit 2) */
-  getTransactionJwsIOS: Promise<string>;
+  getTransactionJwsIOS?: Promise<(string | null)>;
   /** Check whether the user has active subscriptions */
   hasActiveSubscriptions: Promise<boolean>;
-  /** Check introductory offer eligibility for specific products */
+  /** Check introductory offer eligibility for a subscription group */
   isEligibleForIntroOfferIOS: Promise<boolean>;
   /** Verify a StoreKit 2 transaction signature */
   isTransactionVerifiedIOS: Promise<boolean>;
@@ -469,11 +469,13 @@ export interface Query {
   latestTransactionIOS?: Promise<(PurchaseIOS | null)>;
   /** Get StoreKit 2 subscription status details (iOS 15+) */
   subscriptionStatusIOS: Promise<SubscriptionStatusIOS[]>;
+  /** Validate a receipt for a specific product */
+  validateReceiptIOS: Promise<ReceiptValidationResultIOS>;
 }
 
 
 export interface QueryCurrentEntitlementIosArgs {
-  skus?: (string[] | null);
+  sku: string;
 }
 
 
@@ -493,7 +495,7 @@ export interface QueryGetAvailablePurchasesArgs {
 
 
 export interface QueryGetTransactionJwsIosArgs {
-  transactionId: string;
+  sku: string;
 }
 
 
@@ -503,12 +505,12 @@ export interface QueryHasActiveSubscriptionsArgs {
 
 
 export interface QueryIsEligibleForIntroOfferIosArgs {
-  productIds: string[];
+  groupID: string;
 }
 
 
 export interface QueryIsTransactionVerifiedIosArgs {
-  transactionId: string;
+  sku: string;
 }
 
 
@@ -518,7 +520,12 @@ export interface QueryLatestTransactionIosArgs {
 
 
 export interface QuerySubscriptionStatusIosArgs {
-  skus?: (string[] | null);
+  sku: string;
+}
+
+
+export interface QueryValidateReceiptIosArgs {
+  options: ReceiptValidationProps;
 }
 
 export interface ReceiptValidationAndroidOptions {
@@ -720,6 +727,7 @@ export type QueryArgsMap = {
   isTransactionVerifiedIOS: QueryIsTransactionVerifiedIosArgs;
   latestTransactionIOS: QueryLatestTransactionIosArgs;
   subscriptionStatusIOS: QuerySubscriptionStatusIosArgs;
+  validateReceiptIOS: QueryValidateReceiptIosArgs;
 };
 
 export type QueryField<K extends keyof Query> =

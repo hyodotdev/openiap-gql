@@ -2598,17 +2598,17 @@ sealed class ReceiptValidationResult {
 /// GraphQL root mutation operations.
 abstract class MutationResolver {
   /// Acknowledge a non-consumable purchase or subscription
-  Future<VoidResult> acknowledgePurchaseAndroid({
+  Future<bool> acknowledgePurchaseAndroid({
     required String purchaseToken,
   });
   /// Initiate a refund request for a product (iOS 15+)
-  Future<RefundResultIOS> beginRefundRequestIOS({
+  Future<String?> beginRefundRequestIOS({
     required String sku,
   });
   /// Clear pending transactions from the StoreKit payment queue
-  Future<VoidResult> clearTransactionIOS();
+  Future<bool> clearTransactionIOS();
   /// Consume a purchase token so it can be repurchased
-  Future<VoidResult> consumePurchaseAndroid({
+  Future<bool> consumePurchaseAndroid({
     required String purchaseToken,
   });
   /// Open the native subscription management surface
@@ -2625,19 +2625,19 @@ abstract class MutationResolver {
   /// Establish the platform billing connection
   Future<bool> initConnection();
   /// Present the App Store code redemption sheet
-  Future<VoidResult> presentCodeRedemptionSheetIOS();
+  Future<bool> presentCodeRedemptionSheetIOS();
   /// Initiate a purchase flow; rely on events for final state
   Future<RequestPurchaseResult?> requestPurchase({
     required RequestPurchaseProps params,
   });
   /// Purchase the promoted product surfaced by the App Store
-  Future<PurchaseIOS> requestPurchaseOnPromotedProductIOS();
+  Future<bool> requestPurchaseOnPromotedProductIOS();
   /// Restore completed purchases across platforms
   Future<VoidResult> restorePurchases();
   /// Open subscription management UI and return changed purchases (iOS 15+)
   Future<List<PurchaseIOS>> showManageSubscriptionsIOS();
   /// Force a StoreKit sync for transactions (iOS 15+)
-  Future<VoidResult> syncIOS();
+  Future<bool> syncIOS();
   /// Validate purchase receipts with the configured providers
   Future<ReceiptValidationResult> validateReceipt({
     required ReceiptValidationProps options,
@@ -2647,8 +2647,8 @@ abstract class MutationResolver {
 /// GraphQL root query operations.
 abstract class QueryResolver {
   /// Get current StoreKit 2 entitlements (iOS 15+)
-  Future<List<EntitlementIOS>> currentEntitlementIOS({
-    List<String>? skus,
+  Future<PurchaseIOS?> currentEntitlementIOS({
+    required String sku,
   });
   /// Retrieve products or subscriptions from the store
   Future<FetchProductsResult> fetchProducts({
@@ -2669,24 +2669,24 @@ abstract class QueryResolver {
   /// Get the currently promoted product (iOS 11+)
   Future<ProductIOS?> getPromotedProductIOS();
   /// Get base64-encoded receipt data for validation
-  Future<String> getReceiptDataIOS();
+  Future<String?> getReceiptDataIOS();
   /// Get the current App Store storefront country code
   Future<String> getStorefrontIOS();
   /// Get the transaction JWS (StoreKit 2)
-  Future<String> getTransactionJwsIOS({
-    required String transactionId,
+  Future<String?> getTransactionJwsIOS({
+    required String sku,
   });
   /// Check whether the user has active subscriptions
   Future<bool> hasActiveSubscriptions({
     List<String>? subscriptionIds,
   });
-  /// Check introductory offer eligibility for specific products
+  /// Check introductory offer eligibility for a subscription group
   Future<bool> isEligibleForIntroOfferIOS({
-    required List<String> productIds,
+    required String groupID,
   });
   /// Verify a StoreKit 2 transaction signature
   Future<bool> isTransactionVerifiedIOS({
-    required String transactionId,
+    required String sku,
   });
   /// Get the latest transaction for a product using StoreKit 2
   Future<PurchaseIOS?> latestTransactionIOS({
@@ -2694,7 +2694,11 @@ abstract class QueryResolver {
   });
   /// Get StoreKit 2 subscription status details (iOS 15+)
   Future<List<SubscriptionStatusIOS>> subscriptionStatusIOS({
-    List<String>? skus,
+    required String sku,
+  });
+  /// Validate a receipt for a specific product
+  Future<ReceiptValidationResultIOS> validateReceiptIOS({
+    required ReceiptValidationProps options,
   });
 }
 
@@ -2712,14 +2716,14 @@ abstract class SubscriptionResolver {
 
 // MARK: - Mutation Helpers
 
-typedef MutationAcknowledgePurchaseAndroidHandler = Future<VoidResult> Function({
+typedef MutationAcknowledgePurchaseAndroidHandler = Future<bool> Function({
   required String purchaseToken,
 });
-typedef MutationBeginRefundRequestIOSHandler = Future<RefundResultIOS> Function({
+typedef MutationBeginRefundRequestIOSHandler = Future<String?> Function({
   required String sku,
 });
-typedef MutationClearTransactionIOSHandler = Future<VoidResult> Function();
-typedef MutationConsumePurchaseAndroidHandler = Future<VoidResult> Function({
+typedef MutationClearTransactionIOSHandler = Future<bool> Function();
+typedef MutationConsumePurchaseAndroidHandler = Future<bool> Function({
   required String purchaseToken,
 });
 typedef MutationDeepLinkToSubscriptionsHandler = Future<VoidResult> Function({
@@ -2731,14 +2735,14 @@ typedef MutationFinishTransactionHandler = Future<VoidResult> Function({
   bool? isConsumable,
 });
 typedef MutationInitConnectionHandler = Future<bool> Function();
-typedef MutationPresentCodeRedemptionSheetIOSHandler = Future<VoidResult> Function();
+typedef MutationPresentCodeRedemptionSheetIOSHandler = Future<bool> Function();
 typedef MutationRequestPurchaseHandler = Future<RequestPurchaseResult?> Function({
   required RequestPurchaseProps params,
 });
-typedef MutationRequestPurchaseOnPromotedProductIOSHandler = Future<PurchaseIOS> Function();
+typedef MutationRequestPurchaseOnPromotedProductIOSHandler = Future<bool> Function();
 typedef MutationRestorePurchasesHandler = Future<VoidResult> Function();
 typedef MutationShowManageSubscriptionsIOSHandler = Future<List<PurchaseIOS>> Function();
-typedef MutationSyncIOSHandler = Future<VoidResult> Function();
+typedef MutationSyncIOSHandler = Future<bool> Function();
 typedef MutationValidateReceiptHandler = Future<ReceiptValidationResult> Function({
   required ReceiptValidationProps options,
 });
@@ -2781,8 +2785,8 @@ class MutationHandlers {
 
 // MARK: - Query Helpers
 
-typedef QueryCurrentEntitlementIOSHandler = Future<List<EntitlementIOS>> Function({
-  List<String>? skus,
+typedef QueryCurrentEntitlementIOSHandler = Future<PurchaseIOS?> Function({
+  required String sku,
 });
 typedef QueryFetchProductsHandler = Future<FetchProductsResult> Function({
   required ProductRequest params,
@@ -2796,25 +2800,28 @@ typedef QueryGetAvailablePurchasesHandler = Future<List<Purchase>> Function({
 });
 typedef QueryGetPendingTransactionsIOSHandler = Future<List<PurchaseIOS>> Function();
 typedef QueryGetPromotedProductIOSHandler = Future<ProductIOS?> Function();
-typedef QueryGetReceiptDataIOSHandler = Future<String> Function();
+typedef QueryGetReceiptDataIOSHandler = Future<String?> Function();
 typedef QueryGetStorefrontIOSHandler = Future<String> Function();
-typedef QueryGetTransactionJwsIOSHandler = Future<String> Function({
-  required String transactionId,
+typedef QueryGetTransactionJwsIOSHandler = Future<String?> Function({
+  required String sku,
 });
 typedef QueryHasActiveSubscriptionsHandler = Future<bool> Function({
   List<String>? subscriptionIds,
 });
 typedef QueryIsEligibleForIntroOfferIOSHandler = Future<bool> Function({
-  required List<String> productIds,
+  required String groupID,
 });
 typedef QueryIsTransactionVerifiedIOSHandler = Future<bool> Function({
-  required String transactionId,
+  required String sku,
 });
 typedef QueryLatestTransactionIOSHandler = Future<PurchaseIOS?> Function({
   required String sku,
 });
 typedef QuerySubscriptionStatusIOSHandler = Future<List<SubscriptionStatusIOS>> Function({
-  List<String>? skus,
+  required String sku,
+});
+typedef QueryValidateReceiptIOSHandler = Future<ReceiptValidationResultIOS> Function({
+  required ReceiptValidationProps options,
 });
 
 class QueryHandlers {
@@ -2834,6 +2841,7 @@ class QueryHandlers {
     this.isTransactionVerifiedIOS,
     this.latestTransactionIOS,
     this.subscriptionStatusIOS,
+    this.validateReceiptIOS,
   });
 
   final QueryCurrentEntitlementIOSHandler? currentEntitlementIOS;
@@ -2851,6 +2859,7 @@ class QueryHandlers {
   final QueryIsTransactionVerifiedIOSHandler? isTransactionVerifiedIOS;
   final QueryLatestTransactionIOSHandler? latestTransactionIOS;
   final QuerySubscriptionStatusIOSHandler? subscriptionStatusIOS;
+  final QueryValidateReceiptIOSHandler? validateReceiptIOS;
 }
 
 // MARK: - Subscription Helpers
