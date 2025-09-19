@@ -8,98 +8,98 @@ import Foundation
 // MARK: - Enums
 
 public enum ErrorCode: String, Codable, CaseIterable {
-    case unknown = "UNKNOWN"
-    case userCancelled = "USER_CANCELLED"
-    case userError = "USER_ERROR"
-    case itemUnavailable = "ITEM_UNAVAILABLE"
-    case remoteError = "REMOTE_ERROR"
-    case networkError = "NETWORK_ERROR"
-    case serviceError = "SERVICE_ERROR"
-    case receiptFailed = "RECEIPT_FAILED"
-    case receiptFinished = "RECEIPT_FINISHED"
-    case receiptFinishedFailed = "RECEIPT_FINISHED_FAILED"
-    case notPrepared = "NOT_PREPARED"
-    case notEnded = "NOT_ENDED"
-    case alreadyOwned = "ALREADY_OWNED"
-    case developerError = "DEVELOPER_ERROR"
-    case billingResponseJsonParseError = "BILLING_RESPONSE_JSON_PARSE_ERROR"
-    case deferredPayment = "DEFERRED_PAYMENT"
-    case interrupted = "INTERRUPTED"
-    case iapNotAvailable = "IAP_NOT_AVAILABLE"
-    case purchaseError = "PURCHASE_ERROR"
-    case syncError = "SYNC_ERROR"
-    case transactionValidationFailed = "TRANSACTION_VALIDATION_FAILED"
-    case activityUnavailable = "ACTIVITY_UNAVAILABLE"
-    case alreadyPrepared = "ALREADY_PREPARED"
-    case pending = "PENDING"
-    case connectionClosed = "CONNECTION_CLOSED"
-    case initConnection = "INIT_CONNECTION"
-    case serviceDisconnected = "SERVICE_DISCONNECTED"
-    case queryProduct = "QUERY_PRODUCT"
-    case skuNotFound = "SKU_NOT_FOUND"
-    case skuOfferMismatch = "SKU_OFFER_MISMATCH"
-    case itemNotOwned = "ITEM_NOT_OWNED"
-    case billingUnavailable = "BILLING_UNAVAILABLE"
-    case featureNotSupported = "FEATURE_NOT_SUPPORTED"
-    case emptySkuList = "EMPTY_SKU_LIST"
+    case unknown = "unknown"
+    case userCancelled = "user-cancelled"
+    case userError = "user-error"
+    case itemUnavailable = "item-unavailable"
+    case remoteError = "remote-error"
+    case networkError = "network-error"
+    case serviceError = "service-error"
+    case receiptFailed = "receipt-failed"
+    case receiptFinished = "receipt-finished"
+    case receiptFinishedFailed = "receipt-finished-failed"
+    case notPrepared = "not-prepared"
+    case notEnded = "not-ended"
+    case alreadyOwned = "already-owned"
+    case developerError = "developer-error"
+    case billingResponseJsonParseError = "billing-response-json-parse-error"
+    case deferredPayment = "deferred-payment"
+    case interrupted = "interrupted"
+    case iapNotAvailable = "iap-not-available"
+    case purchaseError = "purchase-error"
+    case syncError = "sync-error"
+    case transactionValidationFailed = "transaction-validation-failed"
+    case activityUnavailable = "activity-unavailable"
+    case alreadyPrepared = "already-prepared"
+    case pending = "pending"
+    case connectionClosed = "connection-closed"
+    case initConnection = "init-connection"
+    case serviceDisconnected = "service-disconnected"
+    case queryProduct = "query-product"
+    case skuNotFound = "sku-not-found"
+    case skuOfferMismatch = "sku-offer-mismatch"
+    case itemNotOwned = "item-not-owned"
+    case billingUnavailable = "billing-unavailable"
+    case featureNotSupported = "feature-not-supported"
+    case emptySkuList = "empty-sku-list"
 }
 
 public enum IapEvent: String, Codable, CaseIterable {
-    case purchaseUpdated = "PURCHASE_UPDATED"
-    case purchaseError = "PURCHASE_ERROR"
-    case promotedProductIos = "PROMOTED_PRODUCT_IOS"
+    case purchaseUpdated = "purchase-updated"
+    case purchaseError = "purchase-error"
+    case promotedProductIos = "promoted-product-ios"
 }
 
 public enum IapPlatform: String, Codable, CaseIterable {
-    case ios = "IOS"
-    case android = "ANDROID"
+    case ios = "ios"
+    case android = "android"
 }
 
 public enum PaymentModeIOS: String, Codable, CaseIterable {
-    case empty = "EMPTY"
-    case freeTrial = "FREE_TRIAL"
-    case payAsYouGo = "PAY_AS_YOU_GO"
-    case payUpFront = "PAY_UP_FRONT"
+    case empty = "empty"
+    case freeTrial = "free-trial"
+    case payAsYouGo = "pay-as-you-go"
+    case payUpFront = "pay-up-front"
 }
 
 public enum ProductQueryType: String, Codable, CaseIterable {
-    case inApp = "IN_APP"
-    case subs = "SUBS"
-    case all = "ALL"
+    case inApp = "in-app"
+    case subs = "subs"
+    case all = "all"
 }
 
 public enum ProductType: String, Codable, CaseIterable {
-    case inApp = "IN_APP"
-    case subs = "SUBS"
+    case inApp = "in-app"
+    case subs = "subs"
 }
 
 public enum ProductTypeIOS: String, Codable, CaseIterable {
-    case consumable = "CONSUMABLE"
-    case nonConsumable = "NON_CONSUMABLE"
-    case autoRenewableSubscription = "AUTO_RENEWABLE_SUBSCRIPTION"
-    case nonRenewingSubscription = "NON_RENEWING_SUBSCRIPTION"
+    case consumable = "consumable"
+    case nonConsumable = "non-consumable"
+    case autoRenewableSubscription = "auto-renewable-subscription"
+    case nonRenewingSubscription = "non-renewing-subscription"
 }
 
 public enum PurchaseState: String, Codable, CaseIterable {
-    case pending = "PENDING"
-    case purchased = "PURCHASED"
-    case failed = "FAILED"
-    case restored = "RESTORED"
-    case deferred = "DEFERRED"
-    case unknown = "UNKNOWN"
+    case pending = "pending"
+    case purchased = "purchased"
+    case failed = "failed"
+    case restored = "restored"
+    case deferred = "deferred"
+    case unknown = "unknown"
 }
 
 public enum SubscriptionOfferTypeIOS: String, Codable, CaseIterable {
-    case introductory = "INTRODUCTORY"
-    case promotional = "PROMOTIONAL"
+    case introductory = "introductory"
+    case promotional = "promotional"
 }
 
 public enum SubscriptionPeriodIOS: String, Codable, CaseIterable {
-    case day = "DAY"
-    case week = "WEEK"
-    case month = "MONTH"
-    case year = "YEAR"
-    case empty = "EMPTY"
+    case day = "day"
+    case week = "week"
+    case month = "month"
+    case year = "year"
+    case empty = "empty"
 }
 
 // MARK: - Interfaces

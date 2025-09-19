@@ -23,15 +23,18 @@ This repo standardizes schema and identifier naming to improve clarity across pl
 - Fields and arguments: camelCase.
 - iOS/Android fields should follow the same suffix rules as types
   (e.g., `displayNameIOS`, `offerTokenAndroid`).
-- Enum values in SDL are written in PascalCase. The TypeScript codegen step
-  normalizes the emitted string literal to UPPER_SNAKE_CASE so the runtime
-  values remain easy to compare against constants.
+- Enum values in SDL are written in PascalCase. Generated client libraries map
+  these to kebab-case strings (e.g., `PurchaseUpdated` → `purchase-updated`) so
+  the serialized values remain consistent across TypeScript, Swift, Kotlin, and
+  Dart outputs.
 
 ## Enums
 
 - Enum names: PascalCase (e.g., `ProductType`).
 - Enum values: PascalCase to keep them visually distinct from type names.
   - Examples: `Consumable`, `FreeTrial`, `PayAsYouGo`, `Ios`, `Android`.
+- Runtime values (generated code) use kebab-case. Consumers should compare
+  against the emitted kebab-case strings rather than the SDL identifiers.
 
 ## Defaults
 
