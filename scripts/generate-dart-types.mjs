@@ -93,6 +93,13 @@ const toConstantCase = (value) => value
   .replace(/[-\s]+/g, '_')
   .toUpperCase();
 
+const toKebabCase = (value) => value
+  .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+  .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+  .replace(/[_\s]+/g, '-')
+  .replace(/-+/g, '-')
+  .toLowerCase();
+
 const scalarMap = new Map([
   ['ID', 'String'],
   ['String', 'String'],
@@ -390,7 +397,7 @@ const printEnum = (enumType) => {
   values.forEach((value, index) => {
     addDocComment(lines, value.description, '  ');
     const name = escapeDartName(toPascalCase(value.name));
-    const rawValue = toConstantCase(value.name);
+    const rawValue = toKebabCase(value.name);
     const suffix = index === values.length - 1 ? ';' : ',';
     lines.push(`  ${name}('${rawValue}')${suffix}`);
   });
@@ -404,12 +411,14 @@ const printEnum = (enumType) => {
   );
   values.forEach((value) => {
     const name = escapeDartName(toPascalCase(value.name));
-    const rawValue = toConstantCase(value.name);
-    const schemaValue = value.name;
-    lines.push(`      case '${rawValue}':`, `        return ${enumType.name}.${name};`);
-    if (schemaValue !== rawValue) {
-      lines.push(`      case '${schemaValue}':`, `        return ${enumType.name}.${name};`);
-    }
+    const rawValue = toKebabCase(value.name);
+    const legacyValues = Array.from(new Set([toConstantCase(value.name), value.name]))
+      .filter((candidate) => candidate !== rawValue);
+    lines.push(`      case '${rawValue}':`);
+    legacyValues.forEach((legacy) => {
+      lines.push(`      case '${legacy}':`);
+    });
+    lines.push(`        return ${enumType.name}.${name};`);
   });
   lines.push(
     '    }',

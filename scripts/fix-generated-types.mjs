@@ -47,10 +47,20 @@ for (const [from, to] of scalarReplacements) {
 }
 
 const iosTypeMap = new Map();
+const enumValueOrder = new Map();
 for (const schemaPath of schemaDefinitionFiles) {
   const sdl = readFileSync(schemaPath, 'utf8');
   const document = parse(sdl, { noLocation: true });
   for (const definition of document.definitions) {
+    if ('name' in definition && definition.name) {
+      if (definition.kind === 'EnumTypeDefinition' || definition.kind === 'EnumTypeExtension') {
+        const name = definition.name.value;
+        const existing = enumValueOrder.get(name) ?? [];
+        const values = (definition.values ?? []).map((value) => value.name.value);
+        const merged = [...existing, ...values].filter((value, index, array) => array.indexOf(value) === index);
+        enumValueOrder.set(name, merged);
+      }
+    }
     if (!definition.name) continue;
     const name = definition.name.value;
     if (!name.includes('IOS')) continue;
@@ -75,13 +85,19 @@ const toKebabCase = (value) => value
   .replace(/-+/g, '-')
   .toLowerCase();
 
-// Convert enums (except ErrorCode) to union literal types with lower-snake-case values.
+// Convert enums (except ErrorCode) to union literal types with kebab-case values.
 content = content.replace(/export enum (\w+) \{[\s\S]*?\}\n?/g, (match) => {
   const enumName = match.match(/export enum (\w+)/)[1];
   if (enumName === 'ErrorCode') return match;
-  const valueMatches = [...match.matchAll(/=\s*'([^']+)'/g)];
-  if (valueMatches.length === 0) return match;
-  const literals = valueMatches.map(([, raw]) => `'${toKebabCase(raw)}'`);
+  const schemaValues = enumValueOrder.get(enumName);
+  let literals;
+  if (schemaValues && schemaValues.length) {
+    literals = schemaValues.map((value) => `'${toKebabCase(value)}'`);
+  } else {
+    const valueMatches = [...match.matchAll(/=\s*'([^']+)'/g)];
+    if (valueMatches.length === 0) return match;
+    literals = valueMatches.map(([, raw]) => `'${toKebabCase(raw)}'`);
+  }
   return `export type ${enumName} = ${literals.join(' | ')};\n`;
 });
 

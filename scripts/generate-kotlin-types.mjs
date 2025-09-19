@@ -94,6 +94,13 @@ const toConstantCase = (value) => value
   .replace(/[-\s]+/g, '_')
   .toUpperCase();
 
+const toKebabCase = (value) => value
+  .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+  .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+  .replace(/[_\s]+/g, '-')
+  .replace(/-+/g, '-')
+  .toLowerCase();
+
 const scalarMap = new Map([
   ['ID', 'String'],
   ['String', 'String'],
@@ -405,7 +412,7 @@ const printEnum = (enumType) => {
   values.forEach((value, index) => {
     addDocComment(lines, value.description, '    ');
     const caseName = escapeKotlinName(pascalCase(value.name));
-    const rawValue = toConstantCase(value.name);
+    const rawValue = toKebabCase(value.name);
     const suffix = index === values.length - 1 ? '' : ',';
     lines.push(`    ${caseName}("${rawValue}")${suffix}`);
   });
@@ -413,8 +420,13 @@ const printEnum = (enumType) => {
   lines.push(`        fun fromJson(value: String): ${enumType.name} = when (value) {`);
   values.forEach((value) => {
     const caseName = escapeKotlinName(pascalCase(value.name));
-    const rawValue = toConstantCase(value.name);
+    const rawValue = toKebabCase(value.name);
+    const legacyValues = Array.from(new Set([toConstantCase(value.name), value.name]))
+      .filter((candidate) => candidate !== rawValue);
     lines.push(`            "${rawValue}" -> ${enumType.name}.${caseName}`);
+    legacyValues.forEach((legacy) => {
+      lines.push(`            "${legacy}" -> ${enumType.name}.${caseName}`);
+    });
   });
   lines.push(`            else -> throw IllegalArgumentException("Unknown ${enumType.name} value: $value")`, '        }');
   lines.push('    }', '');

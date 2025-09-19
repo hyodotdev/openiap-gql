@@ -113,11 +113,12 @@ const lowerCamelCase = (value) => {
 
 const capitalize = (value) => (value.length === 0 ? value : value.charAt(0).toUpperCase() + value.slice(1));
 
-const toConstantCase = (value) => value
-  .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-  .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
-  .replace(/[-\s]+/g, '_')
-  .toUpperCase();
+const toKebabCase = (value) => value
+  .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+  .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+  .replace(/[_\s]+/g, '-')
+  .replace(/-+/g, '-')
+  .toLowerCase();
 
 const scalarMap = new Map([
   ['ID', 'String'],
@@ -301,7 +302,7 @@ const printEnum = (enumType) => {
   values.forEach((value, index) => {
     addDocComment(lines, value.description, '    ');
     const caseName = escapeSwiftName(lowerCamelCase(value.name));
-    const rawValue = toConstantCase(value.name);
+    const rawValue = toKebabCase(value.name);
     lines.push(`    case ${caseName} = "${rawValue}"`);
     if (index === values.length - 1) return;
   });
