@@ -330,68 +330,88 @@ const getOperationReturnType = (graphqlType) => {
   };
 };
 
-const buildFromJsonExpression = (metadata, sourceExpression) => {
+const buildFromJsonExpression = (metadata, sourceExpression, options = {}) => {
+  const { path = 'value' } = options;
+  const pathLiteral = `"${path}"`;
   if (metadata.kind === 'list') {
-    const element = buildFromJsonExpression(metadata.elementType, 'it');
+    const elementPath = `${path}[]`;
+    const arrayExpression = metadata.nullable
+      ? `optionalJsonArray(${sourceExpression}, ${pathLiteral})`
+      : `requireJsonArray(${sourceExpression}, ${pathLiteral})`;
+    const elementExpression = buildFromJsonExpression(metadata.elementType, 'element', { path: elementPath });
     if (metadata.nullable) {
-      return `(${sourceExpression} as List<*>?)?.map { ${element} }`;
+      return `${arrayExpression}?.map { element -> ${elementExpression} }`;
     }
-    return `(${sourceExpression} as List<*>).map { ${element} }`;
+    return `${arrayExpression}.map { element -> ${elementExpression} }`;
   }
   if (metadata.kind === 'scalar') {
     switch (metadata.name) {
       case 'Float':
         return metadata.nullable
-          ? `(${sourceExpression} as Number?)?.toDouble()`
-          : `(${sourceExpression} as Number).toDouble()`;
+          ? `optionalJsonDouble(${sourceExpression}, ${pathLiteral})`
+          : `requireJsonDouble(${sourceExpression}, ${pathLiteral})`;
       case 'Int':
         return metadata.nullable
-          ? `(${sourceExpression} as Number?)?.toInt()`
-          : `(${sourceExpression} as Number).toInt()`;
+          ? `optionalJsonInt(${sourceExpression}, ${pathLiteral})`
+          : `requireJsonInt(${sourceExpression}, ${pathLiteral})`;
       case 'Boolean':
         return metadata.nullable
-          ? `${sourceExpression} as Boolean?`
-          : `${sourceExpression} as Boolean`;
+          ? `optionalJsonBoolean(${sourceExpression}, ${pathLiteral})`
+          : `requireJsonBoolean(${sourceExpression}, ${pathLiteral})`;
       case 'ID':
       case 'String':
         return metadata.nullable
-          ? `${sourceExpression} as String?`
-          : `${sourceExpression} as String`;
+          ? `optionalJsonString(${sourceExpression}, ${pathLiteral})`
+          : `requireJsonString(${sourceExpression}, ${pathLiteral})`;
       default:
         return metadata.nullable ? `${sourceExpression}` : `${sourceExpression}`;
     }
   }
   if (metadata.kind === 'enum') {
+    const base = metadata.nullable
+      ? `optionalJsonString(${sourceExpression}, ${pathLiteral})`
+      : `requireJsonString(${sourceExpression}, ${pathLiteral})`;
     return metadata.nullable
-      ? `(${sourceExpression} as String?)?.let { ${metadata.name}.fromJson(it) }`
-      : `${metadata.name}.fromJson(${sourceExpression} as String)`;
+      ? `${base}?.let { ${metadata.name}.fromJson(it) }`
+      : `${metadata.name}.fromJson(${base})`;
   }
   if (['object', 'input', 'interface', 'union'].includes(metadata.kind)) {
-    const cast = metadata.nullable
-      ? `(${sourceExpression} as Map<String, Any?>?)`
-      : `(${sourceExpression} as Map<String, Any?>)`;
     const callTarget = metadata.name ?? metadata.kotlinType;
+    const helper = metadata.nullable
+      ? `optionalJsonObject(${sourceExpression}, ${pathLiteral})`
+      : `requireJsonObject(${sourceExpression}, ${pathLiteral})`;
     return metadata.nullable
-      ? `${cast}?.let { ${callTarget}.fromJson(it) }`
-      : `${callTarget}.fromJson(${cast})`;
+      ? `${helper}?.let { ${callTarget}.fromJson(it) }`
+      : `${callTarget}.fromJson(${helper})`;
   }
   return metadata.nullable ? `${sourceExpression}` : `${sourceExpression}`;
 };
 
-const buildToJsonExpression = (metadata, accessorExpression) => {
+const buildToJsonElement = (metadata, valueExpression) => {
   if (metadata.kind === 'list') {
-    const inner = buildToJsonExpression(metadata.elementType, 'it');
-    return metadata.nullable
-      ? `${accessorExpression}?.map { ${inner} }`
-      : `${accessorExpression}.map { ${inner} }`;
+    const inner = buildToJsonElement(metadata.elementType, 'element');
+    return `buildJsonArray { ${valueExpression}.forEach { element -> add(${inner}) } }`;
   }
   if (metadata.kind === 'enum') {
-    return metadata.nullable ? `${accessorExpression}?.toJson()` : `${accessorExpression}.toJson()`;
+    return `JsonPrimitive(${valueExpression}.toJson())`;
   }
   if (['object', 'input', 'interface', 'union'].includes(metadata.kind)) {
-    return metadata.nullable ? `${accessorExpression}?.toJson()` : `${accessorExpression}.toJson()`;
+    return `${valueExpression}.toJson()`;
   }
-  return accessorExpression;
+  if (metadata.kind === 'scalar') {
+    switch (metadata.name) {
+      case 'Float':
+      case 'Int':
+      case 'Boolean':
+        return `JsonPrimitive(${valueExpression})`;
+      case 'ID':
+      case 'String':
+        return `JsonPrimitive(${valueExpression})`;
+      default:
+        return valueExpression;
+    }
+  }
+  return valueExpression;
 };
 
 const lines = [];
@@ -402,6 +422,114 @@ lines.push(
   '// ============================================================================',
   '',
   '@file:Suppress("unused")',
+  '',
+  'import kotlinx.serialization.json.JsonArray',
+  'import kotlinx.serialization.json.JsonElement',
+  'import kotlinx.serialization.json.JsonNull',
+  'import kotlinx.serialization.json.JsonObject',
+  'import kotlinx.serialization.json.JsonPrimitive',
+  'import kotlinx.serialization.json.add',
+  'import kotlinx.serialization.json.booleanOrNull',
+  'import kotlinx.serialization.json.buildJsonArray',
+  'import kotlinx.serialization.json.buildJsonObject',
+  'import kotlinx.serialization.json.doubleOrNull',
+  'import kotlinx.serialization.json.intOrNull',
+  'import kotlinx.serialization.json.put',
+  '',
+  'private fun describeJsonType(value: JsonElement?): String = when (value) {',
+  '    null -> "absent"',
+  '    JsonNull -> "null"',
+  '    is JsonObject -> "object"',
+  '    is JsonArray -> "array"',
+  '    is JsonPrimitive -> when {',
+  '        value.isString -> "string"',
+  '        value.booleanOrNull != null -> "boolean"',
+  '        value.doubleOrNull != null -> "number"',
+  '        else -> "primitive"',
+  '    }',
+  '    else -> "unknown"',
+  '}',
+  '',
+  'private fun isNullish(element: JsonElement?): Boolean = element == null || element === JsonNull',
+  '',
+  'private fun requireJsonObject(element: JsonElement?, fieldName: String): JsonObject {',
+  '    if (element is JsonObject) return element',
+  '    throw IllegalArgumentException("Expected `${fieldName}` to be an object but was ${describeJsonType(element)}")',
+  '}',
+  '',
+  'private fun optionalJsonObject(element: JsonElement?, fieldName: String): JsonObject? {',
+  '    if (isNullish(element)) return null',
+  '    if (element is JsonObject) return element',
+  '    throw IllegalArgumentException("Expected `${fieldName}` to be an object but was ${describeJsonType(element)}")',
+  '}',
+  '',
+  'private fun requireJsonArray(element: JsonElement?, fieldName: String): JsonArray {',
+  '    if (element is JsonArray) return element',
+  '    throw IllegalArgumentException("Expected `${fieldName}` to be an array but was ${describeJsonType(element)}")',
+  '}',
+  '',
+  'private fun optionalJsonArray(element: JsonElement?, fieldName: String): JsonArray? {',
+  '    if (isNullish(element)) return null',
+  '    if (element is JsonArray) return element',
+  '    throw IllegalArgumentException("Expected `${fieldName}` to be an array but was ${describeJsonType(element)}")',
+  '}',
+  '',
+  'private fun requireJsonPrimitive(element: JsonElement?, fieldName: String): JsonPrimitive {',
+  '    if (element is JsonPrimitive && element !== JsonNull) return element',
+  '    throw IllegalArgumentException("Expected `${fieldName}` to be a primitive but was ${describeJsonType(element)}")',
+  '}',
+  '',
+  'private fun optionalJsonPrimitive(element: JsonElement?, fieldName: String): JsonPrimitive? {',
+  '    if (isNullish(element)) return null',
+  '    if (element is JsonPrimitive && element !== JsonNull) return element',
+  '    throw IllegalArgumentException("Expected `${fieldName}` to be a primitive but was ${describeJsonType(element)}")',
+  '}',
+  '',
+  'private fun requireJsonString(element: JsonElement?, fieldName: String): String {',
+  '    val primitive = requireJsonPrimitive(element, fieldName)',
+  '    if (!primitive.isString) {',
+  '        throw IllegalArgumentException("Expected `${fieldName}` to be a string but was ${describeJsonType(primitive)}")',
+  '    }',
+  '    return primitive.content',
+  '}',
+  '',
+  'private fun optionalJsonString(element: JsonElement?, fieldName: String): String? {',
+  '    val primitive = optionalJsonPrimitive(element, fieldName) ?: return null',
+  '    if (!primitive.isString) {',
+  '        throw IllegalArgumentException("Expected `${fieldName}` to be a string but was ${describeJsonType(primitive)}")',
+  '    }',
+  '    return primitive.content',
+  '}',
+  '',
+  'private fun requireJsonBoolean(element: JsonElement?, fieldName: String): Boolean {',
+  '    val primitive = requireJsonPrimitive(element, fieldName)',
+  '    return primitive.booleanOrNull ?: throw IllegalArgumentException("Expected `${fieldName}` to be a boolean but was ${describeJsonType(primitive)}")',
+  '}',
+  '',
+  'private fun optionalJsonBoolean(element: JsonElement?, fieldName: String): Boolean? {',
+  '    val primitive = optionalJsonPrimitive(element, fieldName) ?: return null',
+  '    return primitive.booleanOrNull ?: throw IllegalArgumentException("Expected `${fieldName}` to be a boolean but was ${describeJsonType(primitive)}")',
+  '}',
+  '',
+  'private fun requireJsonInt(element: JsonElement?, fieldName: String): Int {',
+  '    val primitive = requireJsonPrimitive(element, fieldName)',
+  '    return primitive.intOrNull ?: throw IllegalArgumentException("Expected `${fieldName}` to be an integer but was ${describeJsonType(primitive)}")',
+  '}',
+  '',
+  'private fun optionalJsonInt(element: JsonElement?, fieldName: String): Int? {',
+  '    val primitive = optionalJsonPrimitive(element, fieldName) ?: return null',
+  '    return primitive.intOrNull ?: throw IllegalArgumentException("Expected `${fieldName}` to be an integer but was ${describeJsonType(primitive)}")',
+  '}',
+  '',
+  'private fun requireJsonDouble(element: JsonElement?, fieldName: String): Double {',
+  '    val primitive = requireJsonPrimitive(element, fieldName)',
+  '    return primitive.doubleOrNull ?: throw IllegalArgumentException("Expected `${fieldName}` to be a number but was ${describeJsonType(primitive)}")',
+  '}',
+  '',
+  'private fun optionalJsonDouble(element: JsonElement?, fieldName: String): Double? {',
+  '    val primitive = optionalJsonPrimitive(element, fieldName) ?: return null',
+  '    return primitive.doubleOrNull ?: throw IllegalArgumentException("Expected `${fieldName}` to be a number but was ${describeJsonType(primitive)}")',
+  '}',
   ''
 );
 
@@ -496,23 +624,25 @@ const printDataClass = (objectType) => {
   }
   lines.push('');
   lines.push('    companion object {');
-  lines.push(`        fun fromJson(json: Map<String, Any?>): ${objectType.name} {`);
+  lines.push(`        fun fromJson(json: JsonObject): ${objectType.name} {`);
   lines.push(`            return ${objectType.name}(`);
   fieldInfos.forEach(({ field, propertyName, metadata }) => {
-    const expression = buildFromJsonExpression(metadata, `json["${field.name}"]`);
+    const expression = buildFromJsonExpression(metadata, `json["${field.name}"]`, { path: field.name });
     lines.push(`                ${propertyName} = ${expression},`);
   });
   lines.push('            )');
   lines.push('        }');
   lines.push('    }', '');
   const overrideKeyword = unionInterfaces.length > 0 ? 'override ' : '';
-  lines.push(`    ${overrideKeyword}fun toJson(): Map<String, Any?> = mapOf(`);
-  lines.push(`        "__typename" to "${objectType.name}",`);
+  lines.push(`    ${overrideKeyword}fun toJson(): JsonObject = buildJsonObject {`);
+  lines.push(`        put("__typename", "${objectType.name}")`);
   fieldInfos.forEach(({ field, propertyName, metadata }) => {
-    const expression = buildToJsonExpression(metadata, propertyName);
-    lines.push(`        "${field.name}" to ${expression},`);
+    const jsonValue = metadata.nullable
+      ? `${propertyName}?.let { value -> ${buildToJsonElement(metadata, 'value')} } ?: JsonNull`
+      : buildToJsonElement(metadata, propertyName);
+    lines.push(`        put("${field.name}", ${jsonValue})`);
   });
-  lines.push('    )');
+  lines.push('    }');
   lines.push('}', '');
 };
 
@@ -531,16 +661,16 @@ const printInput = (inputType) => {
     lines.push('    }');
     lines.push('');
     lines.push('    companion object {');
-    lines.push('        fun fromJson(json: Map<String, Any?>): RequestPurchaseProps {');
-    lines.push('            val rawType = (json["type"] as String?)?.let { ProductQueryType.fromJson(it) }');
-    lines.push('            val purchaseJson = json["requestPurchase"] as Map<String, Any?>?');
+    lines.push('        fun fromJson(json: JsonObject): RequestPurchaseProps {');
+    lines.push('            val rawType = optionalJsonString(json["type"], "type")?.let { ProductQueryType.fromJson(it) }');
+    lines.push('            val purchaseJson = optionalJsonObject(json["requestPurchase"], "requestPurchase")');
     lines.push('            if (purchaseJson != null) {');
     lines.push('                val request = Request.Purchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson))');
     lines.push('                val finalType = rawType ?: ProductQueryType.InApp');
     lines.push('                require(finalType == ProductQueryType.InApp) { "type must be IN_APP when requestPurchase is provided" }');
     lines.push('                return RequestPurchaseProps(request = request, type = finalType)');
     lines.push('            }');
-    lines.push('            val subscriptionJson = json["requestSubscription"] as Map<String, Any?>?');
+    lines.push('            val subscriptionJson = optionalJsonObject(json["requestSubscription"], "requestSubscription")');
     lines.push('            if (subscriptionJson != null) {');
     lines.push('                val request = Request.Subscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson))');
     lines.push('                val finalType = rawType ?: ProductQueryType.Subs');
@@ -551,15 +681,15 @@ const printInput = (inputType) => {
     lines.push('        }');
     lines.push('    }');
     lines.push('');
-    lines.push('    fun toJson(): Map<String, Any?> = when (request) {');
-    lines.push('        is Request.Purchase -> mapOf(');
-    lines.push('            "requestPurchase" to request.value.toJson(),');
-    lines.push('            "type" to type.toJson(),');
-    lines.push('        )');
-    lines.push('        is Request.Subscription -> mapOf(');
-    lines.push('            "requestSubscription" to request.value.toJson(),');
-    lines.push('            "type" to type.toJson(),');
-    lines.push('        )');
+    lines.push('    fun toJson(): JsonObject = when (request) {');
+    lines.push('        is Request.Purchase -> buildJsonObject {');
+    lines.push('            put("requestPurchase", request.value.toJson())');
+    lines.push('            put("type", JsonPrimitive(type.toJson()))');
+    lines.push('        }');
+    lines.push('        is Request.Subscription -> buildJsonObject {');
+    lines.push('            put("requestSubscription", request.value.toJson())');
+    lines.push('            put("type", JsonPrimitive(type.toJson()))');
+    lines.push('        }');
     lines.push('    }');
     lines.push('');
     lines.push('    sealed class Request {');
@@ -587,21 +717,23 @@ const printInput = (inputType) => {
   });
   lines.push(') {');
   lines.push('    companion object {');
-  lines.push(`        fun fromJson(json: Map<String, Any?>): ${inputType.name} {`);
-  lines.push(`            return ${inputType.name}(`);
+  lines.push(`        fun fromJson(json: JsonObject): ${inputType.name} {`);
+    lines.push(`            return ${inputType.name}(`);
   fieldInfos.forEach(({ field, propertyName, metadata }) => {
-    const expression = buildFromJsonExpression(metadata, `json["${field.name}"]`);
+    const expression = buildFromJsonExpression(metadata, `json["${field.name}"]`, { path: field.name });
     lines.push(`                ${propertyName} = ${expression},`);
   });
   lines.push('            )');
   lines.push('        }');
   lines.push('    }', '');
-  lines.push('    fun toJson(): Map<String, Any?> = mapOf(');
+  lines.push('    fun toJson(): JsonObject = buildJsonObject {');
   fieldInfos.forEach(({ field, propertyName, metadata }) => {
-    const expression = buildToJsonExpression(metadata, propertyName);
-    lines.push(`        "${field.name}" to ${expression},`);
+    const jsonValue = metadata.nullable
+      ? `${propertyName}?.let { value -> ${buildToJsonElement(metadata, 'value')} } ?: JsonNull`
+      : buildToJsonElement(metadata, propertyName);
+    lines.push(`        put("${field.name}", ${jsonValue})`);
   });
-  lines.push('    )');
+  lines.push('    }');
   lines.push('}', '');
 };
 
@@ -627,14 +759,15 @@ const printUnion = (unionType) => {
 
   const implementations = sharedInterfaceNames.length ? ` : ${sharedInterfaceNames.join(', ')}` : '';
   lines.push(`public sealed interface ${unionType.name}${implementations} {`);
-  lines.push('    fun toJson(): Map<String, Any?>', '');
+  lines.push('    fun toJson(): JsonObject', '');
   lines.push('    companion object {');
-  lines.push(`        fun fromJson(json: Map<String, Any?>): ${unionType.name} {`);
-  lines.push('            return when (json["__typename"] as String?) {');
+  lines.push(`        fun fromJson(json: JsonObject): ${unionType.name} {`);
+  lines.push('            val typeName = requireJsonString(json["__typename"], "__typename")');
+  lines.push('            return when (typeName) {');
   members.forEach((member) => {
     lines.push(`                "${member}" -> ${member}.fromJson(json)`);
   });
-  lines.push(`                else -> throw IllegalArgumentException("Unknown __typename for ${unionType.name}: ${'$'}{json["__typename"]}")`);
+  lines.push(`                else -> throw IllegalArgumentException("Unknown __typename for ${unionType.name}: " + typeName)`);
   lines.push('            }');
   lines.push('        }');
   lines.push('    }');
