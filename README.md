@@ -108,6 +108,16 @@ Then run `./gradlew :openiap-graphql:generateApolloSources` to regenerate the
 models. Keep your query/mutation documents under `src/main/graphql` inside that
 module.
 
+If you prefer to consume the pre-generated `src/generated/Types.kt` models from
+this repo (via `npm run generate:kotlin`), add the JSON serialization runtime to
+your Gradle module:
+
+```kotlin
+dependencies {
+  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+}
+```
+
 ---
 
 ## Workflow Tips
