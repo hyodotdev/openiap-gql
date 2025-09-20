@@ -538,16 +538,14 @@ const printOperationProtocol = (operationType) => {
       const { type: argType, optional: argOptional } = swiftTypeFor(arg.type);
       const argName = escapeSwiftName(arg.name);
       const finalType = argType + (argOptional ? '?' : '');
-      const defaultValue = argOptional ? ' = nil' : '';
-      lines.push(`    func ${escapeSwiftName(field.name)}(_ ${argName}: ${finalType}${defaultValue}) async throws -> ${returnType}`);
+      lines.push(`    func ${escapeSwiftName(field.name)}(_ ${argName}: ${finalType}) async throws -> ${returnType}`);
       continue;
     }
     const params = field.args.map((arg) => {
       const { type: argType, optional: argOptional } = swiftTypeFor(arg.type);
       const argName = escapeSwiftName(arg.name);
       const finalType = argType + (argOptional ? '?' : '');
-      const defaultValue = argOptional ? ' = nil' : '';
-      return `${argName}: ${finalType}${defaultValue}`;
+      return `${argName}: ${finalType}`;
     }).join(', ');
     lines.push(`    func ${escapeSwiftName(field.name)}(${params}) async throws -> ${returnType}`);
   }
