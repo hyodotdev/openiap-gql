@@ -101,6 +101,16 @@ content = content.replace(/export enum (\w+) \{[\s\S]*?\}\n?/g, (match) => {
   return `export type ${enumName} = ${literals.join(' | ')};\n`;
 });
 
+// Convert ErrorCode enum values to kebab-case
+content = content.replace(/export enum [^{]+\{[\s\S]*?\}/g, (block) => {
+  const enumName = block.match(/export enum (\w+)/)[1];
+  if (enumName === 'ErrorCode') {
+    return block.replace(/= '([^']+)'/g, (_, value) => `= '${toKebabCase(value)}'`);
+  } else {
+    return block.replace(/= '([^']+)'/g, (_, value) => `= '${toConstantCase(value)}'`);
+  }
+});
+
 const removeDefinition = (keyword) => {
   const pattern = new RegExp(`^export type ${keyword}[^]*?;\n`, 'm');
   if (pattern.test(content)) {
@@ -180,9 +190,11 @@ const toConstantCase = (value) => value
   .replace(/-/g, '_')
   .toUpperCase();
 
-content = content.replace(/export enum [^{]+\{[\s\S]*?\}/g, (block) =>
-  block.replace(/= '([^']+)'/g, (_, value) => `= '${toConstantCase(value)}'`)
-);
+content = content.replace(/export enum [^{]+\{[\s\S]*?\}/g, (block) => {
+  const enumName = block.match(/export enum (\w+)/)[1];
+  if (enumName === 'ErrorCode') return block;
+  return block.replace(/= '([^']+)'/g, (_, value) => `= '${toConstantCase(value)}'`);
+});
 
 content = content.replace(
   /export interface RequestPurchaseProps \{[\s\S]*?\}\n\n/,
