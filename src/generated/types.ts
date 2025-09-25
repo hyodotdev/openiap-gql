@@ -449,6 +449,8 @@ export interface Query {
   getPromotedProductIOS?: Promise<(ProductIOS | null)>;
   /** Get base64-encoded receipt data for validation */
   getReceiptDataIOS?: Promise<(string | null)>;
+  /** Get the current Play Store storefront country code */
+  getStorefrontAndroid: Promise<string>;
   /** Get the current App Store storefront country code */
   getStorefrontIOS: Promise<string>;
   /** Get the transaction JWS (StoreKit 2) */
@@ -680,6 +682,7 @@ export type QueryArgsMap = {
   getPendingTransactionsIOS: never;
   getPromotedProductIOS: never;
   getReceiptDataIOS: never;
+  getStorefrontAndroid: never;
   getStorefrontIOS: never;
   getTransactionJwsIOS: QueryGetTransactionJwsIosArgs;
   hasActiveSubscriptions: QueryHasActiveSubscriptionsArgs;
