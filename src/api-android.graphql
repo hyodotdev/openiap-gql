@@ -1,5 +1,13 @@
 # Android-specific API operations
 
+extend type Query {
+  """
+  Get the current Play Store storefront country code
+  """
+  # Future
+  getStorefrontAndroid: String!
+}
+
 extend type Mutation {
   """
   Acknowledge a non-consumable purchase or subscription
