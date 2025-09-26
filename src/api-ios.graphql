@@ -5,7 +5,7 @@ extend type Query {
   Get the current App Store storefront country code
   """
   # Future
-  getStorefrontIOS: String!
+  getStorefrontIOS: String! @deprecated(reason: "Use getStorefront")
   """
   Get the currently promoted product (iOS 11+)
   """

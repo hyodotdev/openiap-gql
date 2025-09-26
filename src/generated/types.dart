@@ -2618,8 +2618,8 @@ abstract class QueryResolver {
   Future<ProductIOS?> getPromotedProductIOS();
   /// Get base64-encoded receipt data for validation
   Future<String?> getReceiptDataIOS();
-  /// Get the current Play Store storefront country code
-  Future<String> getStorefrontAndroid();
+  /// Get the current storefront country code
+  Future<String> getStorefront();
   /// Get the current App Store storefront country code
   Future<String> getStorefrontIOS();
   /// Get the transaction JWS (StoreKit 2)
@@ -2717,7 +2717,7 @@ typedef QueryGetAvailablePurchasesHandler = Future<List<Purchase>> Function([Pur
 typedef QueryGetPendingTransactionsIOSHandler = Future<List<PurchaseIOS>> Function();
 typedef QueryGetPromotedProductIOSHandler = Future<ProductIOS?> Function();
 typedef QueryGetReceiptDataIOSHandler = Future<String?> Function();
-typedef QueryGetStorefrontAndroidHandler = Future<String> Function();
+typedef QueryGetStorefrontHandler = Future<String> Function();
 typedef QueryGetStorefrontIOSHandler = Future<String> Function();
 typedef QueryGetTransactionJwsIOSHandler = Future<String?> Function(String sku);
 typedef QueryHasActiveSubscriptionsHandler = Future<bool> Function([List<String>? subscriptionIds]);
@@ -2737,7 +2737,7 @@ class QueryHandlers {
     this.getPendingTransactionsIOS,
     this.getPromotedProductIOS,
     this.getReceiptDataIOS,
-    this.getStorefrontAndroid,
+    this.getStorefront,
     this.getStorefrontIOS,
     this.getTransactionJwsIOS,
     this.hasActiveSubscriptions,
@@ -2756,7 +2756,7 @@ class QueryHandlers {
   final QueryGetPendingTransactionsIOSHandler? getPendingTransactionsIOS;
   final QueryGetPromotedProductIOSHandler? getPromotedProductIOS;
   final QueryGetReceiptDataIOSHandler? getReceiptDataIOS;
-  final QueryGetStorefrontAndroidHandler? getStorefrontAndroid;
+  final QueryGetStorefrontHandler? getStorefront;
   final QueryGetStorefrontIOSHandler? getStorefrontIOS;
   final QueryGetTransactionJwsIOSHandler? getTransactionJwsIOS;
   final QueryHasActiveSubscriptionsHandler? hasActiveSubscriptions;

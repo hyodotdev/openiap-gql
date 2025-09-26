@@ -22,6 +22,11 @@ extend type Query {
   """
   # Future
   hasActiveSubscriptions(subscriptionIds: [String!]): Boolean!
+  """
+  Get the current storefront country code
+  """
+  # Future
+  getStorefront: String!
 }
 
 # Request APIs (event driven)

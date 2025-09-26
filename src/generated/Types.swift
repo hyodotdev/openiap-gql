@@ -976,8 +976,8 @@ public protocol QueryResolver {
     func getPromotedProductIOS() async throws -> ProductIOS?
     /// Get base64-encoded receipt data for validation
     func getReceiptDataIOS() async throws -> String?
-    /// Get the current Play Store storefront country code
-    func getStorefrontAndroid() async throws -> String
+    /// Get the current storefront country code
+    func getStorefront() async throws -> String
     /// Get the current App Store storefront country code
     func getStorefrontIOS() async throws -> String
     /// Get the transaction JWS (StoreKit 2)
@@ -1088,7 +1088,7 @@ public typealias QueryGetAvailablePurchasesHandler = (_ options: PurchaseOptions
 public typealias QueryGetPendingTransactionsIOSHandler = () async throws -> [PurchaseIOS]
 public typealias QueryGetPromotedProductIOSHandler = () async throws -> ProductIOS?
 public typealias QueryGetReceiptDataIOSHandler = () async throws -> String?
-public typealias QueryGetStorefrontAndroidHandler = () async throws -> String
+public typealias QueryGetStorefrontHandler = () async throws -> String
 public typealias QueryGetStorefrontIOSHandler = () async throws -> String
 public typealias QueryGetTransactionJwsIOSHandler = (_ sku: String) async throws -> String?
 public typealias QueryHasActiveSubscriptionsHandler = (_ subscriptionIds: [String]?) async throws -> Bool
@@ -1107,7 +1107,7 @@ public struct QueryHandlers {
     public var getPendingTransactionsIOS: QueryGetPendingTransactionsIOSHandler?
     public var getPromotedProductIOS: QueryGetPromotedProductIOSHandler?
     public var getReceiptDataIOS: QueryGetReceiptDataIOSHandler?
-    public var getStorefrontAndroid: QueryGetStorefrontAndroidHandler?
+    public var getStorefront: QueryGetStorefrontHandler?
     public var getStorefrontIOS: QueryGetStorefrontIOSHandler?
     public var getTransactionJwsIOS: QueryGetTransactionJwsIOSHandler?
     public var hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler?
@@ -1126,7 +1126,7 @@ public struct QueryHandlers {
         getPendingTransactionsIOS: QueryGetPendingTransactionsIOSHandler? = nil,
         getPromotedProductIOS: QueryGetPromotedProductIOSHandler? = nil,
         getReceiptDataIOS: QueryGetReceiptDataIOSHandler? = nil,
-        getStorefrontAndroid: QueryGetStorefrontAndroidHandler? = nil,
+        getStorefront: QueryGetStorefrontHandler? = nil,
         getStorefrontIOS: QueryGetStorefrontIOSHandler? = nil,
         getTransactionJwsIOS: QueryGetTransactionJwsIOSHandler? = nil,
         hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler? = nil,
@@ -1144,7 +1144,7 @@ public struct QueryHandlers {
         self.getPendingTransactionsIOS = getPendingTransactionsIOS
         self.getPromotedProductIOS = getPromotedProductIOS
         self.getReceiptDataIOS = getReceiptDataIOS
-        self.getStorefrontAndroid = getStorefrontAndroid
+        self.getStorefront = getStorefront
         self.getStorefrontIOS = getStorefrontIOS
         self.getTransactionJwsIOS = getTransactionJwsIOS
         self.hasActiveSubscriptions = hasActiveSubscriptions

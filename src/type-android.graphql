@@ -179,3 +179,4 @@ type ReceiptValidationResultAndroid {
   termSku: String!
   testTransaction: Boolean!
 }
+

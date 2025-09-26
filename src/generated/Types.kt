@@ -2123,9 +2123,9 @@ public interface QueryResolver {
      */
     suspend fun getReceiptDataIOS(): String?
     /**
-     * Get the current Play Store storefront country code
+     * Get the current storefront country code
      */
-    suspend fun getStorefrontAndroid(): String
+    suspend fun getStorefront(): String
     /**
      * Get the current App Store storefront country code
      */
@@ -2226,7 +2226,7 @@ public typealias QueryGetAvailablePurchasesHandler = suspend (options: PurchaseO
 public typealias QueryGetPendingTransactionsIOSHandler = suspend () -> List<PurchaseIOS>
 public typealias QueryGetPromotedProductIOSHandler = suspend () -> ProductIOS?
 public typealias QueryGetReceiptDataIOSHandler = suspend () -> String?
-public typealias QueryGetStorefrontAndroidHandler = suspend () -> String
+public typealias QueryGetStorefrontHandler = suspend () -> String
 public typealias QueryGetStorefrontIOSHandler = suspend () -> String
 public typealias QueryGetTransactionJwsIOSHandler = suspend (sku: String) -> String?
 public typealias QueryHasActiveSubscriptionsHandler = suspend (subscriptionIds: List<String>?) -> Boolean
@@ -2245,7 +2245,7 @@ public data class QueryHandlers(
     val getPendingTransactionsIOS: QueryGetPendingTransactionsIOSHandler? = null,
     val getPromotedProductIOS: QueryGetPromotedProductIOSHandler? = null,
     val getReceiptDataIOS: QueryGetReceiptDataIOSHandler? = null,
-    val getStorefrontAndroid: QueryGetStorefrontAndroidHandler? = null,
+    val getStorefront: QueryGetStorefrontHandler? = null,
     val getStorefrontIOS: QueryGetStorefrontIOSHandler? = null,
     val getTransactionJwsIOS: QueryGetTransactionJwsIOSHandler? = null,
     val hasActiveSubscriptions: QueryHasActiveSubscriptionsHandler? = null,
