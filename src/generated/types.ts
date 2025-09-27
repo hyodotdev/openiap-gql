@@ -639,11 +639,6 @@ export interface RequestSubscriptionPropsByPlatforms {
   ios?: (RequestSubscriptionIosProps | null);
 }
 
-export interface StorefrontResultAndroid {
-  countryCode: string;
-  identifier: string;
-}
-
 export interface Subscription {
   /** Fires when the App Store surfaces a promoted product (iOS only) */
   promotedProductIOS: string;

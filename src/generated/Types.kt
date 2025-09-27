@@ -1402,27 +1402,6 @@ public data class RequestPurchaseResultPurchase(val value: Purchase?) : RequestP
 
 public data class RequestPurchaseResultPurchases(val value: List<Purchase>?) : RequestPurchaseResult
 
-public data class StorefrontResultAndroid(
-    val countryCode: String,
-    val identifier: String
-) {
-
-    companion object {
-        fun fromJson(json: Map<String, Any?>): StorefrontResultAndroid {
-            return StorefrontResultAndroid(
-                countryCode = json["countryCode"] as String,
-                identifier = json["identifier"] as String,
-            )
-        }
-    }
-
-    fun toJson(): Map<String, Any?> = mapOf(
-        "__typename" to "StorefrontResultAndroid",
-        "countryCode" to countryCode,
-        "identifier" to identifier,
-    )
-}
-
 public data class SubscriptionInfoIOS(
     val introductoryOffer: SubscriptionOfferIOS? = null,
     val promotionalOffers: List<SubscriptionOfferIOS>? = null,

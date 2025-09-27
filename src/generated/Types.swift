@@ -426,11 +426,6 @@ public enum RequestPurchaseResult {
     case purchases([Purchase]?)
 }
 
-public struct StorefrontResultAndroid: Codable {
-    public var countryCode: String
-    public var identifier: String
-}
-
 public struct SubscriptionInfoIOS: Codable {
     public var introductoryOffer: SubscriptionOfferIOS?
     public var promotionalOffers: [SubscriptionOfferIOS]?
