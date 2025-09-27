@@ -222,6 +222,33 @@ public enum class PaymentModeIOS(val rawValue: String) {
     fun toJson(): String = rawValue
 }
 
+public enum class ProductDetailType(val rawValue: String) {
+    Consumable("consumable"),
+    NonConsumable("non-consumable"),
+    AutoRenewableSubscription("auto-renewable-subscription"),
+    NonRenewingSubscription("non-renewing-subscription")
+
+    companion object {
+        fun fromJson(value: String): ProductDetailType = when (value) {
+            "consumable" -> ProductDetailType.Consumable
+            "CONSUMABLE" -> ProductDetailType.Consumable
+            "Consumable" -> ProductDetailType.Consumable
+            "non-consumable" -> ProductDetailType.NonConsumable
+            "NON_CONSUMABLE" -> ProductDetailType.NonConsumable
+            "NonConsumable" -> ProductDetailType.NonConsumable
+            "auto-renewable-subscription" -> ProductDetailType.AutoRenewableSubscription
+            "AUTO_RENEWABLE_SUBSCRIPTION" -> ProductDetailType.AutoRenewableSubscription
+            "AutoRenewableSubscription" -> ProductDetailType.AutoRenewableSubscription
+            "non-renewing-subscription" -> ProductDetailType.NonRenewingSubscription
+            "NON_RENEWING_SUBSCRIPTION" -> ProductDetailType.NonRenewingSubscription
+            "NonRenewingSubscription" -> ProductDetailType.NonRenewingSubscription
+            else -> throw IllegalArgumentException("Unknown ProductDetailType value: $value")
+        }
+    }
+
+    fun toJson(): String = rawValue
+}
+
 public enum class ProductQueryType(val rawValue: String) {
     InApp("in-app"),
     Subs("subs"),
@@ -389,6 +416,7 @@ public interface ProductCommon {
     val price: Double?
     val title: String
     val type: ProductType
+    val typeDetails: ProductDetailType
 }
 
 public interface PurchaseCommon {
@@ -685,7 +713,8 @@ public data class ProductAndroid(
     val price: Double? = null,
     val subscriptionOfferDetailsAndroid: List<ProductSubscriptionAndroidOfferDetails>? = null,
     val title: String,
-    val type: ProductType
+    val type: ProductType,
+    val typeDetails: ProductDetailType
 ) : ProductCommon, Product {
 
     companion object {
@@ -704,6 +733,7 @@ public data class ProductAndroid(
                 subscriptionOfferDetailsAndroid = (json["subscriptionOfferDetailsAndroid"] as List<*>?)?.map { ProductSubscriptionAndroidOfferDetails.fromJson((it as Map<String, Any?>)) },
                 title = json["title"] as String,
                 type = ProductType.fromJson(json["type"] as String),
+                typeDetails = ProductDetailType.fromJson(json["typeDetails"] as String),
             )
         }
     }
@@ -723,6 +753,7 @@ public data class ProductAndroid(
         "subscriptionOfferDetailsAndroid" to subscriptionOfferDetailsAndroid?.map { it.toJson() },
         "title" to title,
         "type" to type.toJson(),
+        "typeDetails" to typeDetails.toJson(),
     )
 }
 
@@ -765,6 +796,7 @@ public data class ProductIOS(
     val subscriptionInfoIOS: SubscriptionInfoIOS? = null,
     val title: String,
     val type: ProductType,
+    val typeDetails: ProductDetailType,
     val typeIOS: ProductTypeIOS
 ) : ProductCommon, Product {
 
@@ -785,6 +817,7 @@ public data class ProductIOS(
                 subscriptionInfoIOS = (json["subscriptionInfoIOS"] as Map<String, Any?>?)?.let { SubscriptionInfoIOS.fromJson(it) },
                 title = json["title"] as String,
                 type = ProductType.fromJson(json["type"] as String),
+                typeDetails = ProductDetailType.fromJson(json["typeDetails"] as String),
                 typeIOS = ProductTypeIOS.fromJson(json["typeIOS"] as String),
             )
         }
@@ -806,6 +839,7 @@ public data class ProductIOS(
         "subscriptionInfoIOS" to subscriptionInfoIOS?.toJson(),
         "title" to title,
         "type" to type.toJson(),
+        "typeDetails" to typeDetails.toJson(),
         "typeIOS" to typeIOS.toJson(),
     )
 }
@@ -823,7 +857,8 @@ public data class ProductSubscriptionAndroid(
     val price: Double? = null,
     val subscriptionOfferDetailsAndroid: List<ProductSubscriptionAndroidOfferDetails>,
     val title: String,
-    val type: ProductType
+    val type: ProductType,
+    val typeDetails: ProductDetailType
 ) : ProductCommon, ProductSubscription {
 
     companion object {
@@ -842,6 +877,7 @@ public data class ProductSubscriptionAndroid(
                 subscriptionOfferDetailsAndroid = (json["subscriptionOfferDetailsAndroid"] as List<*>).map { ProductSubscriptionAndroidOfferDetails.fromJson((it as Map<String, Any?>)) },
                 title = json["title"] as String,
                 type = ProductType.fromJson(json["type"] as String),
+                typeDetails = ProductDetailType.fromJson(json["typeDetails"] as String),
             )
         }
     }
@@ -861,6 +897,7 @@ public data class ProductSubscriptionAndroid(
         "subscriptionOfferDetailsAndroid" to subscriptionOfferDetailsAndroid.map { it.toJson() },
         "title" to title,
         "type" to type.toJson(),
+        "typeDetails" to typeDetails.toJson(),
     )
 }
 
@@ -917,6 +954,7 @@ public data class ProductSubscriptionIOS(
     val subscriptionPeriodUnitIOS: SubscriptionPeriodIOS? = null,
     val title: String,
     val type: ProductType,
+    val typeDetails: ProductDetailType,
     val typeIOS: ProductTypeIOS
 ) : ProductCommon, ProductSubscription {
 
@@ -945,6 +983,7 @@ public data class ProductSubscriptionIOS(
                 subscriptionPeriodUnitIOS = (json["subscriptionPeriodUnitIOS"] as String?)?.let { SubscriptionPeriodIOS.fromJson(it) },
                 title = json["title"] as String,
                 type = ProductType.fromJson(json["type"] as String),
+                typeDetails = ProductDetailType.fromJson(json["typeDetails"] as String),
                 typeIOS = ProductTypeIOS.fromJson(json["typeIOS"] as String),
             )
         }
@@ -974,6 +1013,7 @@ public data class ProductSubscriptionIOS(
         "subscriptionPeriodUnitIOS" to subscriptionPeriodUnitIOS?.toJson(),
         "title" to title,
         "type" to type.toJson(),
+        "typeDetails" to typeDetails.toJson(),
         "typeIOS" to typeIOS.toJson(),
     )
 }
@@ -1361,6 +1401,27 @@ public sealed interface RequestPurchaseResult
 public data class RequestPurchaseResultPurchase(val value: Purchase?) : RequestPurchaseResult
 
 public data class RequestPurchaseResultPurchases(val value: List<Purchase>?) : RequestPurchaseResult
+
+public data class StorefrontResultAndroid(
+    val countryCode: String,
+    val identifier: String
+) {
+
+    companion object {
+        fun fromJson(json: Map<String, Any?>): StorefrontResultAndroid {
+            return StorefrontResultAndroid(
+                countryCode = json["countryCode"] as String,
+                identifier = json["identifier"] as String,
+            )
+        }
+    }
+
+    fun toJson(): Map<String, Any?> = mapOf(
+        "__typename" to "StorefrontResultAndroid",
+        "countryCode" to countryCode,
+        "identifier" to identifier,
+    )
+}
 
 public data class SubscriptionInfoIOS(
     val introductoryOffer: SubscriptionOfferIOS? = null,

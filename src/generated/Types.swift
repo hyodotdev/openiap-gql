@@ -62,6 +62,13 @@ public enum PaymentModeIOS: String, Codable, CaseIterable {
     case payUpFront = "pay-up-front"
 }
 
+public enum ProductDetailType: String, Codable, CaseIterable {
+    case consumable = "consumable"
+    case nonConsumable = "non-consumable"
+    case autoRenewableSubscription = "auto-renewable-subscription"
+    case nonRenewingSubscription = "non-renewing-subscription"
+}
+
 public enum ProductQueryType: String, Codable, CaseIterable {
     case inApp = "in-app"
     case subs = "subs"
@@ -115,6 +122,7 @@ public protocol ProductCommon: Codable {
     var price: Double? { get }
     var title: String { get }
     var type: ProductType { get }
+    var typeDetails: ProductDetailType { get }
 }
 
 public protocol PurchaseCommon: Codable {
@@ -223,6 +231,7 @@ public struct ProductAndroid: Codable, ProductCommon {
     public var subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails]?
     public var title: String
     public var type: ProductType
+    public var typeDetails: ProductDetailType
 }
 
 public struct ProductAndroidOneTimePurchaseOfferDetail: Codable {
@@ -246,6 +255,7 @@ public struct ProductIOS: Codable, ProductCommon {
     public var subscriptionInfoIOS: SubscriptionInfoIOS?
     public var title: String
     public var type: ProductType
+    public var typeDetails: ProductDetailType
     public var typeIOS: ProductTypeIOS
 }
 
@@ -263,6 +273,7 @@ public struct ProductSubscriptionAndroid: Codable, ProductCommon {
     public var subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails]
     public var title: String
     public var type: ProductType
+    public var typeDetails: ProductDetailType
 }
 
 public struct ProductSubscriptionAndroidOfferDetails: Codable {
@@ -296,6 +307,7 @@ public struct ProductSubscriptionIOS: Codable, ProductCommon {
     public var subscriptionPeriodUnitIOS: SubscriptionPeriodIOS?
     public var title: String
     public var type: ProductType
+    public var typeDetails: ProductDetailType
     public var typeIOS: ProductTypeIOS
 }
 
@@ -412,6 +424,11 @@ public struct RenewalInfoIOS: Codable {
 public enum RequestPurchaseResult {
     case purchase(Purchase?)
     case purchases([Purchase]?)
+}
+
+public struct StorefrontResultAndroid: Codable {
+    public var countryCode: String
+    public var identifier: String
 }
 
 public struct SubscriptionInfoIOS: Codable {
@@ -733,6 +750,15 @@ public enum Product: Codable, ProductCommon {
             return value.type
         }
     }
+
+    public var typeDetails: ProductDetailType {
+        switch self {
+        case let .productAndroid(value):
+            return value.typeDetails
+        case let .productIos(value):
+            return value.typeDetails
+        }
+    }
 }
 
 public enum ProductSubscription: Codable, ProductCommon {
@@ -826,6 +852,15 @@ public enum ProductSubscription: Codable, ProductCommon {
             return value.type
         case let .productSubscriptionIos(value):
             return value.type
+        }
+    }
+
+    public var typeDetails: ProductDetailType {
+        switch self {
+        case let .productSubscriptionAndroid(value):
+            return value.typeDetails
+        case let .productSubscriptionIos(value):
+            return value.typeDetails
         }
     }
 }
