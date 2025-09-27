@@ -279,6 +279,40 @@ enum PaymentModeIOS {
   String toJson() => value;
 }
 
+enum ProductDetailType {
+  Consumable('consumable'),
+  NonConsumable('non-consumable'),
+  AutoRenewableSubscription('auto-renewable-subscription'),
+  NonRenewingSubscription('non-renewing-subscription');
+
+  const ProductDetailType(this.value);
+  final String value;
+
+  factory ProductDetailType.fromJson(String value) {
+    switch (value) {
+      case 'consumable':
+      case 'CONSUMABLE':
+      case 'Consumable':
+        return ProductDetailType.Consumable;
+      case 'non-consumable':
+      case 'NON_CONSUMABLE':
+      case 'NonConsumable':
+        return ProductDetailType.NonConsumable;
+      case 'auto-renewable-subscription':
+      case 'AUTO_RENEWABLE_SUBSCRIPTION':
+      case 'AutoRenewableSubscription':
+        return ProductDetailType.AutoRenewableSubscription;
+      case 'non-renewing-subscription':
+      case 'NON_RENEWING_SUBSCRIPTION':
+      case 'NonRenewingSubscription':
+        return ProductDetailType.NonRenewingSubscription;
+    }
+    throw ArgumentError('Unknown ProductDetailType value: $value');
+  }
+
+  String toJson() => value;
+}
+
 enum ProductQueryType {
   InApp('in-app'),
   Subs('subs'),
@@ -486,6 +520,7 @@ abstract class ProductCommon {
   double? get price;
   String get title;
   ProductType get type;
+  ProductDetailType get typeDetails;
 }
 
 abstract class PurchaseCommon {
@@ -845,6 +880,7 @@ class ProductAndroid extends Product implements ProductCommon {
     this.subscriptionOfferDetailsAndroid,
     required this.title,
     required this.type,
+    required this.typeDetails,
   });
 
   final String currency;
@@ -860,6 +896,7 @@ class ProductAndroid extends Product implements ProductCommon {
   final List<ProductSubscriptionAndroidOfferDetails>? subscriptionOfferDetailsAndroid;
   final String title;
   final ProductType type;
+  final ProductDetailType typeDetails;
 
   factory ProductAndroid.fromJson(Map<String, dynamic> json) {
     return ProductAndroid(
@@ -876,6 +913,7 @@ class ProductAndroid extends Product implements ProductCommon {
       subscriptionOfferDetailsAndroid: (json['subscriptionOfferDetailsAndroid'] as List<dynamic>?) == null ? null : (json['subscriptionOfferDetailsAndroid'] as List<dynamic>?)!.map((e) => ProductSubscriptionAndroidOfferDetails.fromJson(e as Map<String, dynamic>)).toList(),
       title: json['title'] as String,
       type: ProductType.fromJson(json['type'] as String),
+      typeDetails: ProductDetailType.fromJson(json['typeDetails'] as String),
     );
   }
 
@@ -896,6 +934,7 @@ class ProductAndroid extends Product implements ProductCommon {
       'subscriptionOfferDetailsAndroid': subscriptionOfferDetailsAndroid == null ? null : subscriptionOfferDetailsAndroid!.map((e) => e.toJson()).toList(),
       'title': title,
       'type': type.toJson(),
+      'typeDetails': typeDetails.toJson(),
     };
   }
 }
@@ -945,6 +984,7 @@ class ProductIOS extends Product implements ProductCommon {
     this.subscriptionInfoIOS,
     required this.title,
     required this.type,
+    required this.typeDetails,
     required this.typeIOS,
   });
 
@@ -962,6 +1002,7 @@ class ProductIOS extends Product implements ProductCommon {
   final SubscriptionInfoIOS? subscriptionInfoIOS;
   final String title;
   final ProductType type;
+  final ProductDetailType typeDetails;
   final ProductTypeIOS typeIOS;
 
   factory ProductIOS.fromJson(Map<String, dynamic> json) {
@@ -980,6 +1021,7 @@ class ProductIOS extends Product implements ProductCommon {
       subscriptionInfoIOS: json['subscriptionInfoIOS'] != null ? SubscriptionInfoIOS.fromJson(json['subscriptionInfoIOS'] as Map<String, dynamic>) : null,
       title: json['title'] as String,
       type: ProductType.fromJson(json['type'] as String),
+      typeDetails: ProductDetailType.fromJson(json['typeDetails'] as String),
       typeIOS: ProductTypeIOS.fromJson(json['typeIOS'] as String),
     );
   }
@@ -1002,6 +1044,7 @@ class ProductIOS extends Product implements ProductCommon {
       'subscriptionInfoIOS': subscriptionInfoIOS?.toJson(),
       'title': title,
       'type': type.toJson(),
+      'typeDetails': typeDetails.toJson(),
       'typeIOS': typeIOS.toJson(),
     };
   }
@@ -1022,6 +1065,7 @@ class ProductSubscriptionAndroid extends ProductSubscription implements ProductC
     required this.subscriptionOfferDetailsAndroid,
     required this.title,
     required this.type,
+    required this.typeDetails,
   });
 
   final String currency;
@@ -1037,6 +1081,7 @@ class ProductSubscriptionAndroid extends ProductSubscription implements ProductC
   final List<ProductSubscriptionAndroidOfferDetails> subscriptionOfferDetailsAndroid;
   final String title;
   final ProductType type;
+  final ProductDetailType typeDetails;
 
   factory ProductSubscriptionAndroid.fromJson(Map<String, dynamic> json) {
     return ProductSubscriptionAndroid(
@@ -1053,6 +1098,7 @@ class ProductSubscriptionAndroid extends ProductSubscription implements ProductC
       subscriptionOfferDetailsAndroid: (json['subscriptionOfferDetailsAndroid'] as List<dynamic>).map((e) => ProductSubscriptionAndroidOfferDetails.fromJson(e as Map<String, dynamic>)).toList(),
       title: json['title'] as String,
       type: ProductType.fromJson(json['type'] as String),
+      typeDetails: ProductDetailType.fromJson(json['typeDetails'] as String),
     );
   }
 
@@ -1073,6 +1119,7 @@ class ProductSubscriptionAndroid extends ProductSubscription implements ProductC
       'subscriptionOfferDetailsAndroid': subscriptionOfferDetailsAndroid.map((e) => e.toJson()).toList(),
       'title': title,
       'type': type.toJson(),
+      'typeDetails': typeDetails.toJson(),
     };
   }
 }
@@ -1138,6 +1185,7 @@ class ProductSubscriptionIOS extends ProductSubscription implements ProductCommo
     this.subscriptionPeriodUnitIOS,
     required this.title,
     required this.type,
+    required this.typeDetails,
     required this.typeIOS,
   });
 
@@ -1163,6 +1211,7 @@ class ProductSubscriptionIOS extends ProductSubscription implements ProductCommo
   final SubscriptionPeriodIOS? subscriptionPeriodUnitIOS;
   final String title;
   final ProductType type;
+  final ProductDetailType typeDetails;
   final ProductTypeIOS typeIOS;
 
   factory ProductSubscriptionIOS.fromJson(Map<String, dynamic> json) {
@@ -1189,6 +1238,7 @@ class ProductSubscriptionIOS extends ProductSubscription implements ProductCommo
       subscriptionPeriodUnitIOS: json['subscriptionPeriodUnitIOS'] != null ? SubscriptionPeriodIOS.fromJson(json['subscriptionPeriodUnitIOS'] as String) : null,
       title: json['title'] as String,
       type: ProductType.fromJson(json['type'] as String),
+      typeDetails: ProductDetailType.fromJson(json['typeDetails'] as String),
       typeIOS: ProductTypeIOS.fromJson(json['typeIOS'] as String),
     );
   }
@@ -1219,6 +1269,7 @@ class ProductSubscriptionIOS extends ProductSubscription implements ProductCommo
       'subscriptionPeriodUnitIOS': subscriptionPeriodUnitIOS?.toJson(),
       'title': title,
       'type': type.toJson(),
+      'typeDetails': typeDetails.toJson(),
       'typeIOS': typeIOS.toJson(),
     };
   }
@@ -2465,6 +2516,8 @@ sealed class Product implements ProductCommon {
   String get title;
   @override
   ProductType get type;
+  @override
+  ProductDetailType get typeDetails;
 
   Map<String, dynamic> toJson();
 }
@@ -2503,6 +2556,8 @@ sealed class ProductSubscription implements ProductCommon {
   String get title;
   @override
   ProductType get type;
+  @override
+  ProductDetailType get typeDetails;
 
   Map<String, dynamic> toJson();
 }

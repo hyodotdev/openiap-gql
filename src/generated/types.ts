@@ -227,6 +227,7 @@ export interface ProductAndroid extends ProductCommon {
   subscriptionOfferDetailsAndroid?: (ProductSubscriptionAndroidOfferDetails[] | null);
   title: string;
   type: ProductType;
+  typeDetails: ProductDetailType;
 }
 
 export interface ProductAndroidOneTimePurchaseOfferDetail {
@@ -246,7 +247,10 @@ export interface ProductCommon {
   price?: (number | null);
   title: string;
   type: ProductType;
+  typeDetails: ProductDetailType;
 }
+
+export type ProductDetailType = 'consumable' | 'non-consumable' | 'auto-renewable-subscription' | 'non-renewing-subscription';
 
 export interface ProductIOS extends ProductCommon {
   currency: string;
@@ -263,6 +267,7 @@ export interface ProductIOS extends ProductCommon {
   subscriptionInfoIOS?: (SubscriptionInfoIOS | null);
   title: string;
   type: ProductType;
+  typeDetails: ProductDetailType;
   typeIOS: ProductTypeIOS;
 }
 
@@ -289,6 +294,7 @@ export interface ProductSubscriptionAndroid extends ProductCommon {
   subscriptionOfferDetailsAndroid: ProductSubscriptionAndroidOfferDetails[];
   title: string;
   type: ProductType;
+  typeDetails: ProductDetailType;
 }
 
 export interface ProductSubscriptionAndroidOfferDetails {
@@ -322,6 +328,7 @@ export interface ProductSubscriptionIOS extends ProductCommon {
   subscriptionPeriodUnitIOS?: (SubscriptionPeriodIOS | null);
   title: string;
   type: ProductType;
+  typeDetails: ProductDetailType;
   typeIOS: ProductTypeIOS;
 }
 
