@@ -12,17 +12,6 @@ enum ProductType {
   Subs
 }
 
-# Detailed product types (unified for both Android and iOS)
-enum ProductDetailType {
-  # In-app purchases (one-time)
-  Consumable
-  NonConsumable
-
-  # Subscriptions
-  AutoRenewableSubscription
-  NonRenewingSubscription
-}
-
 # Purchase lifecycle states
 enum PurchaseState {
   Pending
@@ -46,7 +35,6 @@ interface ProductCommon {
   title: String!
   description: String!
   type: ProductType!
-  typeDetails: ProductDetailType!
   displayName: String
   displayPrice: String!
   currency: String!

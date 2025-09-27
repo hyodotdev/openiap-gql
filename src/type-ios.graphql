@@ -1,8 +1,7 @@
 # iOS-specific GraphQL Types
 
 # iOS detailed product types
-# @deprecated Use ProductDetailType from type.graphql instead
-enum ProductTypeIOS @deprecated(reason: "Use ProductDetailType from common types instead") {
+enum ProductTypeIOS {
   Consumable
   NonConsumable
   AutoRenewableSubscription
@@ -76,7 +75,6 @@ type ProductIOS implements ProductCommon {
   jsonRepresentationIOS: String!
   subscriptionInfoIOS: SubscriptionInfoIOS
   typeIOS: ProductTypeIOS!
-  typeDetails: ProductDetailType!
 }
 
 # iOS subscription product
@@ -99,7 +97,6 @@ type ProductSubscriptionIOS implements ProductCommon {
   jsonRepresentationIOS: String!
   subscriptionInfoIOS: SubscriptionInfoIOS
   typeIOS: ProductTypeIOS!
-  typeDetails: ProductDetailType!
 
   discountsIOS: [DiscountIOS!]
   introductoryPriceIOS: String

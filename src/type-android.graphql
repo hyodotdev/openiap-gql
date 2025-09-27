@@ -43,7 +43,6 @@ type ProductAndroid implements ProductCommon {
 
   # Android-specific
   nameAndroid: String!
-  typeDetails: ProductDetailType!
   oneTimePurchaseOfferDetailsAndroid: ProductAndroidOneTimePurchaseOfferDetail
   subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails!]
 }
@@ -63,7 +62,6 @@ type ProductSubscriptionAndroid implements ProductCommon {
 
   # Android-specific
   nameAndroid: String!
-  typeDetails: ProductDetailType!
   oneTimePurchaseOfferDetailsAndroid: ProductAndroidOneTimePurchaseOfferDetail
   subscriptionOfferDetailsAndroid: [ProductSubscriptionAndroidOfferDetails!]!
 }
