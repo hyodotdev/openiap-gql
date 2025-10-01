@@ -186,6 +186,10 @@ input RequestPurchaseIosProps {
   Discount offer to apply
   """
   withOffer: DiscountOfferInputIOS
+  """
+  External purchase URL for alternative billing (iOS)
+  """
+  externalPurchaseUrl: String
 }
 
 # iOS uses the same props for subscriptions
@@ -195,6 +199,10 @@ input RequestSubscriptionIosProps {
   appAccountToken: String
   quantity: Int
   withOffer: DiscountOfferInputIOS
+  """
+  External purchase URL for alternative billing (iOS)
+  """
+  externalPurchaseUrl: String
 }
 
 # iOS Discount Offer (input)

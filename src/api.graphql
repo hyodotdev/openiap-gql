@@ -35,7 +35,7 @@ extend type Mutation {
   Establish the platform billing connection
   """
   # Future
-  initConnection: Boolean!
+  initConnection(config: InitConnectionConfig): Boolean!
   """
   Close the platform billing connection
   """

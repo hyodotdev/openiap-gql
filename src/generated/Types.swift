@@ -7,6 +7,19 @@ import Foundation
 
 // MARK: - Enums
 
+/// Alternative billing mode for Android
+/// Controls which billing system is used
+public enum AlternativeBillingModeAndroid: String, Codable, CaseIterable {
+    /// Standard Google Play billing (default)
+    case none = "none"
+    /// User choice billing - user can select between Google Play or alternative
+    /// Requires Google Play Billing Library 7.0+
+    case userChoice = "user-choice"
+    /// Alternative billing only - no Google Play billing option
+    /// Requires Google Play Billing Library 6.2+
+    case alternativeOnly = "alternative-only"
+}
+
 public enum ErrorCode: String, Codable, CaseIterable {
     case unknown = "unknown"
     case userCancelled = "user-cancelled"
@@ -472,6 +485,13 @@ public struct DiscountOfferInputIOS: Codable {
     public var timestamp: Double
 }
 
+/// Connection initialization configuration
+public struct InitConnectionConfig: Codable {
+    /// Alternative billing mode for Android
+    /// If not specified, defaults to NONE (standard Google Play billing)
+    public var alternativeBillingModeAndroid: AlternativeBillingModeAndroid?
+}
+
 public struct ProductRequest: Codable {
     public var skus: [String]
     public var type: ProductQueryType?
@@ -526,6 +546,8 @@ public struct RequestPurchaseIosProps: Codable {
     public var andDangerouslyFinishTransactionAutomatically: Bool?
     /// App account token for user tracking
     public var appAccountToken: String?
+    /// External purchase URL for alternative billing (iOS)
+    public var externalPurchaseUrl: String?
     /// Purchase quantity
     public var quantity: Int?
     /// Product SKU
@@ -537,8 +559,9 @@ public struct RequestPurchaseIosProps: Codable {
 public struct RequestPurchaseProps: Codable {
     public var request: Request
     public var type: ProductQueryType
+    public var useAlternativeBilling: Bool?
 
-    public init(request: Request, type: ProductQueryType? = nil) {
+    public init(request: Request, type: ProductQueryType? = nil, useAlternativeBilling: Bool? = nil) {
         switch request {
         case .purchase:
             let resolved = type ?? .inApp
@@ -550,17 +573,20 @@ public struct RequestPurchaseProps: Codable {
             self.type = resolved
         }
         self.request = request
+        self.useAlternativeBilling = useAlternativeBilling
     }
 
     private enum CodingKeys: String, CodingKey {
         case requestPurchase
         case requestSubscription
         case type
+        case useAlternativeBilling
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let decodedType = try container.decodeIfPresent(ProductQueryType.self, forKey: .type)
+        self.useAlternativeBilling = try container.decodeIfPresent(Bool.self, forKey: .useAlternativeBilling)
         if let purchase = try container.decodeIfPresent(RequestPurchasePropsByPlatforms.self, forKey: .requestPurchase) {
             let finalType = decodedType ?? .inApp
             guard finalType == .inApp else {
@@ -591,6 +617,7 @@ public struct RequestPurchaseProps: Codable {
             try container.encode(value, forKey: .requestSubscription)
         }
         try container.encode(type, forKey: .type)
+        try container.encodeIfPresent(useAlternativeBilling, forKey: .useAlternativeBilling)
     }
 
     public enum Request {
@@ -626,6 +653,8 @@ public struct RequestSubscriptionAndroidProps: Codable {
 public struct RequestSubscriptionIosProps: Codable {
     public var andDangerouslyFinishTransactionAutomatically: Bool?
     public var appAccountToken: String?
+    /// External purchase URL for alternative billing (iOS)
+    public var externalPurchaseUrl: String?
     public var quantity: Int?
     public var sku: String
     public var withOffer: DiscountOfferInputIOS?
@@ -930,10 +959,24 @@ public protocol MutationResolver {
     func acknowledgePurchaseAndroid(_ purchaseToken: String) async throws -> Bool
     /// Initiate a refund request for a product (iOS 15+)
     func beginRefundRequestIOS(_ sku: String) async throws -> String?
+    /// Check if alternative billing is available for this user/device
+    /// Step 1 of alternative billing flow
+    /// 
+    /// Returns true if available, false otherwise
+    /// Throws OpenIapError.NotPrepared if billing client not ready
+    func checkAlternativeBillingAvailabilityAndroid() async throws -> Bool
     /// Clear pending transactions from the StoreKit payment queue
     func clearTransactionIOS() async throws -> Bool
     /// Consume a purchase token so it can be repurchased
     func consumePurchaseAndroid(_ purchaseToken: String) async throws -> Bool
+    /// Create external transaction token for Google Play reporting
+    /// Step 3 of alternative billing flow
+    /// Must be called AFTER successful payment in your payment system
+    /// Token must be reported to Google Play backend within 24 hours
+    /// 
+    /// Returns token string, or null if creation failed
+    /// Throws OpenIapError.NotPrepared if billing client not ready
+    func createAlternativeBillingTokenAndroid() async throws -> String?
     /// Open the native subscription management surface
     func deepLinkToSubscriptions(_ options: DeepLinkOptions?) async throws -> Void
     /// Close the platform billing connection
@@ -941,7 +984,7 @@ public protocol MutationResolver {
     /// Finish a transaction after validating receipts
     func finishTransaction(purchase: PurchaseInput, isConsumable: Bool?) async throws -> Void
     /// Establish the platform billing connection
-    func initConnection() async throws -> Bool
+    func initConnection(_ config: InitConnectionConfig?) async throws -> Bool
     /// Present the App Store code redemption sheet
     func presentCodeRedemptionSheetIOS() async throws -> Bool
     /// Initiate a purchase flow; rely on events for final state
@@ -950,6 +993,13 @@ public protocol MutationResolver {
     func requestPurchaseOnPromotedProductIOS() async throws -> Bool
     /// Restore completed purchases across platforms
     func restorePurchases() async throws -> Void
+    /// Show alternative billing information dialog to user
+    /// Step 2 of alternative billing flow
+    /// Must be called BEFORE processing payment in your payment system
+    /// 
+    /// Returns true if user accepted, false if user canceled
+    /// Throws OpenIapError.NotPrepared if billing client not ready
+    func showAlternativeBillingDialogAndroid() async throws -> Bool
     /// Open subscription management UI and return changed purchases (iOS 15+)
     func showManageSubscriptionsIOS() async throws -> [PurchaseIOS]
     /// Force a StoreKit sync for transactions (iOS 15+)
@@ -1012,16 +1062,19 @@ public protocol SubscriptionResolver {
 
 public typealias MutationAcknowledgePurchaseAndroidHandler = (_ purchaseToken: String) async throws -> Bool
 public typealias MutationBeginRefundRequestIOSHandler = (_ sku: String) async throws -> String?
+public typealias MutationCheckAlternativeBillingAvailabilityAndroidHandler = () async throws -> Bool
 public typealias MutationClearTransactionIOSHandler = () async throws -> Bool
 public typealias MutationConsumePurchaseAndroidHandler = (_ purchaseToken: String) async throws -> Bool
+public typealias MutationCreateAlternativeBillingTokenAndroidHandler = () async throws -> String?
 public typealias MutationDeepLinkToSubscriptionsHandler = (_ options: DeepLinkOptions?) async throws -> Void
 public typealias MutationEndConnectionHandler = () async throws -> Bool
 public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, _ isConsumable: Bool?) async throws -> Void
-public typealias MutationInitConnectionHandler = () async throws -> Bool
+public typealias MutationInitConnectionHandler = (_ config: InitConnectionConfig?) async throws -> Bool
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = () async throws -> Bool
 public typealias MutationRequestPurchaseHandler = (_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = () async throws -> Bool
 public typealias MutationRestorePurchasesHandler = () async throws -> Void
+public typealias MutationShowAlternativeBillingDialogAndroidHandler = () async throws -> Bool
 public typealias MutationShowManageSubscriptionsIOSHandler = () async throws -> [PurchaseIOS]
 public typealias MutationSyncIOSHandler = () async throws -> Bool
 public typealias MutationValidateReceiptHandler = (_ options: ReceiptValidationProps) async throws -> ReceiptValidationResult
@@ -1029,8 +1082,10 @@ public typealias MutationValidateReceiptHandler = (_ options: ReceiptValidationP
 public struct MutationHandlers {
     public var acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler?
     public var beginRefundRequestIOS: MutationBeginRefundRequestIOSHandler?
+    public var checkAlternativeBillingAvailabilityAndroid: MutationCheckAlternativeBillingAvailabilityAndroidHandler?
     public var clearTransactionIOS: MutationClearTransactionIOSHandler?
     public var consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler?
+    public var createAlternativeBillingTokenAndroid: MutationCreateAlternativeBillingTokenAndroidHandler?
     public var deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler?
     public var endConnection: MutationEndConnectionHandler?
     public var finishTransaction: MutationFinishTransactionHandler?
@@ -1039,6 +1094,7 @@ public struct MutationHandlers {
     public var requestPurchase: MutationRequestPurchaseHandler?
     public var requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler?
     public var restorePurchases: MutationRestorePurchasesHandler?
+    public var showAlternativeBillingDialogAndroid: MutationShowAlternativeBillingDialogAndroidHandler?
     public var showManageSubscriptionsIOS: MutationShowManageSubscriptionsIOSHandler?
     public var syncIOS: MutationSyncIOSHandler?
     public var validateReceipt: MutationValidateReceiptHandler?
@@ -1046,8 +1102,10 @@ public struct MutationHandlers {
     public init(
         acknowledgePurchaseAndroid: MutationAcknowledgePurchaseAndroidHandler? = nil,
         beginRefundRequestIOS: MutationBeginRefundRequestIOSHandler? = nil,
+        checkAlternativeBillingAvailabilityAndroid: MutationCheckAlternativeBillingAvailabilityAndroidHandler? = nil,
         clearTransactionIOS: MutationClearTransactionIOSHandler? = nil,
         consumePurchaseAndroid: MutationConsumePurchaseAndroidHandler? = nil,
+        createAlternativeBillingTokenAndroid: MutationCreateAlternativeBillingTokenAndroidHandler? = nil,
         deepLinkToSubscriptions: MutationDeepLinkToSubscriptionsHandler? = nil,
         endConnection: MutationEndConnectionHandler? = nil,
         finishTransaction: MutationFinishTransactionHandler? = nil,
@@ -1056,14 +1114,17 @@ public struct MutationHandlers {
         requestPurchase: MutationRequestPurchaseHandler? = nil,
         requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = nil,
         restorePurchases: MutationRestorePurchasesHandler? = nil,
+        showAlternativeBillingDialogAndroid: MutationShowAlternativeBillingDialogAndroidHandler? = nil,
         showManageSubscriptionsIOS: MutationShowManageSubscriptionsIOSHandler? = nil,
         syncIOS: MutationSyncIOSHandler? = nil,
         validateReceipt: MutationValidateReceiptHandler? = nil
     ) {
         self.acknowledgePurchaseAndroid = acknowledgePurchaseAndroid
         self.beginRefundRequestIOS = beginRefundRequestIOS
+        self.checkAlternativeBillingAvailabilityAndroid = checkAlternativeBillingAvailabilityAndroid
         self.clearTransactionIOS = clearTransactionIOS
         self.consumePurchaseAndroid = consumePurchaseAndroid
+        self.createAlternativeBillingTokenAndroid = createAlternativeBillingTokenAndroid
         self.deepLinkToSubscriptions = deepLinkToSubscriptions
         self.endConnection = endConnection
         self.finishTransaction = finishTransaction
@@ -1072,6 +1133,7 @@ public struct MutationHandlers {
         self.requestPurchase = requestPurchase
         self.requestPurchaseOnPromotedProductIOS = requestPurchaseOnPromotedProductIOS
         self.restorePurchases = restorePurchases
+        self.showAlternativeBillingDialogAndroid = showAlternativeBillingDialogAndroid
         self.showManageSubscriptionsIOS = showManageSubscriptionsIOS
         self.syncIOS = syncIOS
         self.validateReceipt = validateReceipt

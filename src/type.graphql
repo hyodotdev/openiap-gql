@@ -121,6 +121,10 @@ input RequestPurchaseProps {
   Explicit purchase type hint (defaults to in-app)
   """
   type: ProductQueryType = InApp
+  """
+  Use alternative billing (Google Play alternative billing, Apple external purchase link)
+  """
+  useAlternativeBilling: Boolean
 }
 
 # Minimal purchase information required to finish transactions
@@ -199,4 +203,16 @@ type ActiveSubscription {
   transactionId: String!
   purchaseToken: String
   transactionDate: Float!
+}
+
+# Initialization configuration
+"""
+Connection initialization configuration
+"""
+input InitConnectionConfig {
+  """
+  Alternative billing mode for Android
+  If not specified, defaults to NONE (standard Google Play billing)
+  """
+  alternativeBillingModeAndroid: AlternativeBillingModeAndroid
 }

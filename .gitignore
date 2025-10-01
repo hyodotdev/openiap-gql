@@ -4,3 +4,4 @@ generators/dart/.dart_tool/
 generators/dart/build/
 generators/dart/lib/generated/
 generators/swift/Generated/
+.claude

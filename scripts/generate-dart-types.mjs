@@ -478,22 +478,38 @@ const printObject = (objectType) => {
   lines.push(`class ${objectType.name}${extendsClause}${implementsClause} {`);
   lines.push(`  const ${objectType.name}({`);
   const fields = Object.values(objectType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+
+  // Special handling for PurchaseAndroid and PurchaseIOS to add isAlternativeBilling if missing
+  const needsAlternativeBilling = (objectType.name === 'PurchaseAndroid' || objectType.name === 'PurchaseIOS')
+    && !fields.some(f => f.name === 'isAlternativeBilling');
+
   const fieldInfos = fields.map((field) => {
     const { type, nullable, metadata } = getDartType(field.type);
     const fieldName = escapeDartName(field.name);
     return { field, fieldName, type, nullable, metadata };
   });
+
   fieldInfos.forEach(({ field, nullable, fieldName }) => {
     addDocComment(lines, field.description, '    ');
     const line = `    ${nullable ? '' : 'required '}this.${fieldName},`;
     lines.push(line);
   });
+
+  if (needsAlternativeBilling) {
+    lines.push('    this.isAlternativeBilling,');
+  }
+
   lines.push('  });', '');
   fieldInfos.forEach(({ field, type, nullable, fieldName }) => {
     addDocComment(lines, field.description, '  ');
     const fieldType = `${type}${nullable ? '?' : ''}`;
     lines.push(`  final ${fieldType} ${fieldName};`);
   });
+
+  if (needsAlternativeBilling) {
+    lines.push('  final bool? isAlternativeBilling;');
+  }
+
   lines.push('');
   lines.push(`  factory ${objectType.name}.fromJson(Map<String, dynamic> json) {`);
   lines.push(`    return ${objectType.name}(`);
@@ -501,6 +517,9 @@ const printObject = (objectType) => {
     const jsonExpression = buildFromJsonExpression(metadata, `json['${field.name}']`);
     lines.push(`      ${fieldName}: ${jsonExpression},`);
   });
+  if (needsAlternativeBilling) {
+    lines.push(`      isAlternativeBilling: json['isAlternativeBilling'] as bool?,`);
+  }
   lines.push('    );');
   lines.push('  }', '');
   if (baseUnion) {
@@ -513,6 +532,9 @@ const printObject = (objectType) => {
     const toJsonExpression = buildToJsonExpression(metadata, fieldName);
     lines.push(`      '${field.name}': ${toJsonExpression},`);
   });
+  if (needsAlternativeBilling) {
+    lines.push(`      'isAlternativeBilling': isAlternativeBilling,`);
+  }
   lines.push('    };');
   lines.push('  }');
   lines.push('}', '');
@@ -525,6 +547,7 @@ const printInput = (inputType) => {
     lines.push('  RequestPurchaseProps({');
     lines.push('    required this.request,');
     lines.push('    ProductQueryType? type,');
+    lines.push('    this.useAlternativeBilling,');
     lines.push('  }) : type = type ?? (request is RequestPurchasePropsRequestPurchase');
     lines.push('          ? ProductQueryType.InApp');
     lines.push('          : ProductQueryType.Subs) {');
@@ -538,10 +561,12 @@ const printInput = (inputType) => {
     lines.push('');
     lines.push('  final RequestPurchasePropsRequest request;');
     lines.push('  final ProductQueryType type;');
+    lines.push('  final bool? useAlternativeBilling;');
     lines.push('');
     lines.push('  factory RequestPurchaseProps.fromJson(Map<String, dynamic> json) {');
     lines.push("    final typeValue = json['type'] as String?;");
     lines.push('    final parsedType = typeValue != null ? ProductQueryType.fromJson(typeValue) : null;');
+    lines.push("    final useAlternativeBilling = json['useAlternativeBilling'] as bool?;");
     lines.push("    final purchaseJson = json['requestPurchase'] as Map<String, dynamic>?;");
     lines.push('    if (purchaseJson != null) {');
     lines.push('      final request = RequestPurchasePropsRequestPurchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson));');
@@ -549,7 +574,7 @@ const printInput = (inputType) => {
     lines.push('      if (finalType != ProductQueryType.InApp) {');
     lines.push("        throw ArgumentError('type must be IN_APP when requestPurchase is provided');");
     lines.push('      }');
-    lines.push('      return RequestPurchaseProps(request: request, type: finalType);');
+    lines.push('      return RequestPurchaseProps(request: request, type: finalType, useAlternativeBilling: useAlternativeBilling);');
     lines.push('    }');
     lines.push("    final subscriptionJson = json['requestSubscription'] as Map<String, dynamic>?;");
     lines.push('    if (subscriptionJson != null) {');
@@ -558,7 +583,7 @@ const printInput = (inputType) => {
     lines.push('      if (finalType != ProductQueryType.Subs) {');
     lines.push("        throw ArgumentError('type must be SUBS when requestSubscription is provided');");
     lines.push('      }');
-    lines.push('      return RequestPurchaseProps(request: request, type: finalType);');
+    lines.push('      return RequestPurchaseProps(request: request, type: finalType, useAlternativeBilling: useAlternativeBilling);');
     lines.push('    }');
     lines.push("    throw ArgumentError('RequestPurchaseProps requires requestPurchase or requestSubscription');");
     lines.push('  }');
@@ -568,23 +593,25 @@ const printInput = (inputType) => {
     lines.push('      return {');
     lines.push("        'requestPurchase': (request as RequestPurchasePropsRequestPurchase).value.toJson(),");
     lines.push("        'type': type.toJson(),");
+    lines.push("        'useAlternativeBilling': useAlternativeBilling,");
     lines.push('      };');
     lines.push('    }');
     lines.push('    if (request is RequestPurchasePropsRequestSubscription) {');
     lines.push('      return {');
     lines.push("        'requestSubscription': (request as RequestPurchasePropsRequestSubscription).value.toJson(),");
     lines.push("        'type': type.toJson(),");
+    lines.push("        'useAlternativeBilling': useAlternativeBilling,");
     lines.push('      };');
     lines.push('    }');
     lines.push("    throw StateError('Unsupported RequestPurchaseProps request variant');");
     lines.push('  }');
     lines.push('');
-    lines.push('  static RequestPurchaseProps inApp({required RequestPurchasePropsByPlatforms request}) {');
-    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestPurchase(request), type: ProductQueryType.InApp);');
+    lines.push('  static RequestPurchaseProps inApp({required RequestPurchasePropsByPlatforms request, bool? useAlternativeBilling}) {');
+    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestPurchase(request), type: ProductQueryType.InApp, useAlternativeBilling: useAlternativeBilling);');
     lines.push('  }');
     lines.push('');
-    lines.push('  static RequestPurchaseProps subs({required RequestSubscriptionPropsByPlatforms request}) {');
-    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestSubscription(request), type: ProductQueryType.Subs);');
+    lines.push('  static RequestPurchaseProps subs({required RequestSubscriptionPropsByPlatforms request, bool? useAlternativeBilling}) {');
+    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestSubscription(request), type: ProductQueryType.Subs, useAlternativeBilling: useAlternativeBilling);');
     lines.push('  }');
     lines.push('}');
     lines.push('');
