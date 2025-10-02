@@ -19,6 +19,8 @@ export interface ActiveSubscription {
   isActive: boolean;
   productId: string;
   purchaseToken?: (string | null);
+  /** Required for subscription upgrade/downgrade on Android */
+  purchaseTokenAndroid?: (string | null);
   transactionDate: number;
   transactionId: string;
   willExpireSoon?: (boolean | null);

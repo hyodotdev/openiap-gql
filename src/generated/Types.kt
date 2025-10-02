@@ -466,6 +466,10 @@ public data class ActiveSubscription(
     val isActive: Boolean,
     val productId: String,
     val purchaseToken: String? = null,
+    /**
+     * Required for subscription upgrade/downgrade on Android
+     */
+    val purchaseTokenAndroid: String? = null,
     val transactionDate: Double,
     val transactionId: String,
     val willExpireSoon: Boolean? = null
@@ -483,6 +487,7 @@ public data class ActiveSubscription(
                 isActive = json["isActive"] as Boolean,
                 productId = json["productId"] as String,
                 purchaseToken = json["purchaseToken"] as String?,
+                purchaseTokenAndroid = json["purchaseTokenAndroid"] as String?,
                 transactionDate = (json["transactionDate"] as Number).toDouble(),
                 transactionId = json["transactionId"] as String,
                 willExpireSoon = json["willExpireSoon"] as Boolean?,
@@ -501,6 +506,7 @@ public data class ActiveSubscription(
         "isActive" to isActive,
         "productId" to productId,
         "purchaseToken" to purchaseToken,
+        "purchaseTokenAndroid" to purchaseTokenAndroid,
         "transactionDate" to transactionDate,
         "transactionId" to transactionId,
         "willExpireSoon" to willExpireSoon,

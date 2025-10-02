@@ -212,6 +212,10 @@ type ActiveSubscription {
   transactionDate: Float!
   basePlanIdAndroid: String
   """
+  Required for subscription upgrade/downgrade on Android
+  """
+  purchaseTokenAndroid: String
+  """
   The current plan identifier. This is:
   - On Android: the basePlanId (e.g., "premium", "premium-year")
   - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")

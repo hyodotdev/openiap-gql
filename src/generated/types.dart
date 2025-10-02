@@ -556,6 +556,8 @@ class ActiveSubscription {
     required this.isActive,
     required this.productId,
     this.purchaseToken,
+    /// Required for subscription upgrade/downgrade on Android
+    this.purchaseTokenAndroid,
     required this.transactionDate,
     required this.transactionId,
     this.willExpireSoon,
@@ -574,6 +576,8 @@ class ActiveSubscription {
   final bool isActive;
   final String productId;
   final String? purchaseToken;
+  /// Required for subscription upgrade/downgrade on Android
+  final String? purchaseTokenAndroid;
   final double transactionDate;
   final String transactionId;
   final bool? willExpireSoon;
@@ -589,6 +593,7 @@ class ActiveSubscription {
       isActive: json['isActive'] as bool,
       productId: json['productId'] as String,
       purchaseToken: json['purchaseToken'] as String?,
+      purchaseTokenAndroid: json['purchaseTokenAndroid'] as String?,
       transactionDate: (json['transactionDate'] as num).toDouble(),
       transactionId: json['transactionId'] as String,
       willExpireSoon: json['willExpireSoon'] as bool?,
@@ -607,6 +612,7 @@ class ActiveSubscription {
       'isActive': isActive,
       'productId': productId,
       'purchaseToken': purchaseToken,
+      'purchaseTokenAndroid': purchaseTokenAndroid,
       'transactionDate': transactionDate,
       'transactionId': transactionId,
       'willExpireSoon': willExpireSoon,

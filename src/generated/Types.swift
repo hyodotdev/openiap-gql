@@ -164,6 +164,8 @@ public struct ActiveSubscription: Codable {
     public var isActive: Bool
     public var productId: String
     public var purchaseToken: String?
+    /// Required for subscription upgrade/downgrade on Android
+    public var purchaseTokenAndroid: String?
     public var transactionDate: Double
     public var transactionId: String
     public var willExpireSoon: Bool?
