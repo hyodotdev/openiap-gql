@@ -453,6 +453,23 @@ const printInput = (inputType) => {
       const propertyName = escapeSwiftName(field.name);
       lines.push(`    public var ${propertyName}: ${propertyType}`);
     }
+    // Generate public initializer
+    lines.push('');
+    const initParams = fields.map((field) => {
+      const { type, optional } = swiftTypeFor(field.type);
+      const propertyType = type + (optional ? '?' : '');
+      const propertyName = escapeSwiftName(field.name);
+      const defaultValue = optional ? ' = nil' : '';
+      return `        ${propertyName}: ${propertyType}${defaultValue}`;
+    }).join(',\n');
+    lines.push('    public init(');
+    lines.push(initParams);
+    lines.push('    ) {');
+    for (const field of fields) {
+      const propertyName = escapeSwiftName(field.name);
+      lines.push(`        self.${propertyName} = ${propertyName}`);
+    }
+    lines.push('    }');
   }
   lines.push('}', '');
 };
