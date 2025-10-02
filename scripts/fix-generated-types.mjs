@@ -46,6 +46,12 @@ for (const [from, to] of scalarReplacements) {
   content = content.replace(pattern, to);
 }
 
+// Create simple type alias for PurchaseInput
+const purchaseInputPattern = /export interface PurchaseInput \{[\s\S]*?\}\n+/;
+if (purchaseInputPattern.test(content)) {
+  content = content.replace(purchaseInputPattern, 'export type PurchaseInput = Purchase;\n\n');
+}
+
 const iosTypeMap = new Map();
 const enumValueOrder = new Map();
 for (const schemaPath of schemaDefinitionFiles) {

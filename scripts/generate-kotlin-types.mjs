@@ -517,6 +517,12 @@ const printDataClass = (objectType) => {
 };
 
 const printInput = (inputType) => {
+  // Alias PurchaseInput to Purchase for cleaner API
+  if (inputType.name === 'PurchaseInput') {
+    lines.push('public typealias PurchaseInput = Purchase');
+    lines.push('');
+    return;
+  }
   if (inputType.name === 'RequestPurchaseProps') {
     addDocComment(lines, inputType.description);
     lines.push('public data class RequestPurchaseProps(');

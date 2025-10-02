@@ -453,17 +453,7 @@ export interface PurchaseIOS extends PurchaseCommon {
   webOrderLineItemIdIOS?: (string | null);
 }
 
-export interface PurchaseInput {
-  id: string;
-  ids?: (string[] | null);
-  isAutoRenewing: boolean;
-  platform: IapPlatform;
-  productId: string;
-  purchaseState: PurchaseState;
-  purchaseToken?: (string | null);
-  quantity: number;
-  transactionDate: number;
-}
+export type PurchaseInput = Purchase;
 
 export interface PurchaseOfferIOS {
   id: string;

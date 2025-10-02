@@ -2038,57 +2038,7 @@ class ProductRequest {
   }
 }
 
-class PurchaseInput {
-  const PurchaseInput({
-    required this.id,
-    this.ids,
-    required this.isAutoRenewing,
-    required this.platform,
-    required this.productId,
-    required this.purchaseState,
-    this.purchaseToken,
-    required this.quantity,
-    required this.transactionDate,
-  });
-
-  final String id;
-  final List<String>? ids;
-  final bool isAutoRenewing;
-  final IapPlatform platform;
-  final String productId;
-  final PurchaseState purchaseState;
-  final String? purchaseToken;
-  final int quantity;
-  final double transactionDate;
-
-  factory PurchaseInput.fromJson(Map<String, dynamic> json) {
-    return PurchaseInput(
-      id: json['id'] as String,
-      ids: (json['ids'] as List<dynamic>?) == null ? null : (json['ids'] as List<dynamic>?)!.map((e) => e as String).toList(),
-      isAutoRenewing: json['isAutoRenewing'] as bool,
-      platform: IapPlatform.fromJson(json['platform'] as String),
-      productId: json['productId'] as String,
-      purchaseState: PurchaseState.fromJson(json['purchaseState'] as String),
-      purchaseToken: json['purchaseToken'] as String?,
-      quantity: json['quantity'] as int,
-      transactionDate: (json['transactionDate'] as num).toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'ids': ids == null ? null : ids!.map((e) => e).toList(),
-      'isAutoRenewing': isAutoRenewing,
-      'platform': platform.toJson(),
-      'productId': productId,
-      'purchaseState': purchaseState.toJson(),
-      'purchaseToken': purchaseToken,
-      'quantity': quantity,
-      'transactionDate': transactionDate,
-    };
-  }
-}
+typedef PurchaseInput = Purchase;
 
 class PurchaseOptions {
   const PurchaseOptions({
@@ -2270,90 +2220,64 @@ class RequestPurchaseIosProps {
   }
 }
 
-class RequestPurchaseProps {
-  RequestPurchaseProps({
-    required this.request,
-    ProductQueryType? type,
-    this.useAlternativeBilling,
-  }) : type = type ?? (request is RequestPurchasePropsRequestPurchase
-          ? ProductQueryType.InApp
-          : ProductQueryType.Subs) {
-    if (request is RequestPurchasePropsRequestPurchase && this.type != ProductQueryType.InApp) {
-      throw ArgumentError('type must be IN_APP when requestPurchase is provided');
-    }
-    if (request is RequestPurchasePropsRequestSubscription && this.type != ProductQueryType.Subs) {
-      throw ArgumentError('type must be SUBS when requestSubscription is provided');
-    }
-  }
+sealed class RequestPurchaseProps {
+  const RequestPurchaseProps._();
 
-  final RequestPurchasePropsRequest request;
-  final ProductQueryType type;
-  final bool? useAlternativeBilling;
+  const factory RequestPurchaseProps.inApp(({
+    RequestPurchaseIosProps? ios,
+    RequestPurchaseAndroidProps? android,
+    bool? useAlternativeBilling,
+  }) props) = _InAppPurchase;
 
-  factory RequestPurchaseProps.fromJson(Map<String, dynamic> json) {
-    final typeValue = json['type'] as String?;
-    final parsedType = typeValue != null ? ProductQueryType.fromJson(typeValue) : null;
-    final useAlternativeBilling = json['useAlternativeBilling'] as bool?;
-    final purchaseJson = json['requestPurchase'] as Map<String, dynamic>?;
-    if (purchaseJson != null) {
-      final request = RequestPurchasePropsRequestPurchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson));
-      final finalType = parsedType ?? ProductQueryType.InApp;
-      if (finalType != ProductQueryType.InApp) {
-        throw ArgumentError('type must be IN_APP when requestPurchase is provided');
-      }
-      return RequestPurchaseProps(request: request, type: finalType, useAlternativeBilling: useAlternativeBilling);
-    }
-    final subscriptionJson = json['requestSubscription'] as Map<String, dynamic>?;
-    if (subscriptionJson != null) {
-      final request = RequestPurchasePropsRequestSubscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson));
-      final finalType = parsedType ?? ProductQueryType.Subs;
-      if (finalType != ProductQueryType.Subs) {
-        throw ArgumentError('type must be SUBS when requestSubscription is provided');
-      }
-      return RequestPurchaseProps(request: request, type: finalType, useAlternativeBilling: useAlternativeBilling);
-    }
-    throw ArgumentError('RequestPurchaseProps requires requestPurchase or requestSubscription');
-  }
+  const factory RequestPurchaseProps.subs(({
+    RequestSubscriptionIosProps? ios,
+    RequestSubscriptionAndroidProps? android,
+    bool? useAlternativeBilling,
+  }) props) = _SubsPurchase;
 
+  Map<String, dynamic> toJson();
+}
+
+class _InAppPurchase extends RequestPurchaseProps {
+  const _InAppPurchase(this.props) : super._();
+  final ({
+    RequestPurchaseIosProps? ios,
+    RequestPurchaseAndroidProps? android,
+    bool? useAlternativeBilling,
+  }) props;
+
+  @override
   Map<String, dynamic> toJson() {
-    if (request is RequestPurchasePropsRequestPurchase) {
-      return {
-        'requestPurchase': (request as RequestPurchasePropsRequestPurchase).value.toJson(),
-        'type': type.toJson(),
-        'useAlternativeBilling': useAlternativeBilling,
-      };
-    }
-    if (request is RequestPurchasePropsRequestSubscription) {
-      return {
-        'requestSubscription': (request as RequestPurchasePropsRequestSubscription).value.toJson(),
-        'type': type.toJson(),
-        'useAlternativeBilling': useAlternativeBilling,
-      };
-    }
-    throw StateError('Unsupported RequestPurchaseProps request variant');
-  }
-
-  static RequestPurchaseProps inApp({required RequestPurchasePropsByPlatforms request, bool? useAlternativeBilling}) {
-    return RequestPurchaseProps(request: RequestPurchasePropsRequestPurchase(request), type: ProductQueryType.InApp, useAlternativeBilling: useAlternativeBilling);
-  }
-
-  static RequestPurchaseProps subs({required RequestSubscriptionPropsByPlatforms request, bool? useAlternativeBilling}) {
-    return RequestPurchaseProps(request: RequestPurchasePropsRequestSubscription(request), type: ProductQueryType.Subs, useAlternativeBilling: useAlternativeBilling);
+    return {
+      'requestPurchase': {
+        if (props.ios != null) 'ios': props.ios!.toJson(),
+        if (props.android != null) 'android': props.android!.toJson(),
+      },
+      'type': ProductQueryType.InApp.toJson(),
+      if (props.useAlternativeBilling != null) 'useAlternativeBilling': props.useAlternativeBilling,
+    };
   }
 }
 
-sealed class RequestPurchasePropsRequest {
-  const RequestPurchasePropsRequest();
-}
+class _SubsPurchase extends RequestPurchaseProps {
+  const _SubsPurchase(this.props) : super._();
+  final ({
+    RequestSubscriptionIosProps? ios,
+    RequestSubscriptionAndroidProps? android,
+    bool? useAlternativeBilling,
+  }) props;
 
-class RequestPurchasePropsRequestPurchase extends RequestPurchasePropsRequest {
-  const RequestPurchasePropsRequestPurchase(this.value);
-  final RequestPurchasePropsByPlatforms value;
-}
-
-class RequestPurchasePropsRequestSubscription extends RequestPurchasePropsRequest {
-  const RequestPurchasePropsRequestSubscription(this.value);
-  final RequestSubscriptionPropsByPlatforms value;
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'requestSubscription': {
+        if (props.ios != null) 'ios': props.ios!.toJson(),
+        if (props.android != null) 'android': props.android!.toJson(),
+      },
+      'type': ProductQueryType.Subs.toJson(),
+      if (props.useAlternativeBilling != null) 'useAlternativeBilling': props.useAlternativeBilling,
+    };
+  }
 }
 
 class RequestPurchasePropsByPlatforms {
@@ -2671,7 +2595,10 @@ abstract class MutationResolver {
   /// Throws OpenIapError.NotPrepared if billing client not ready
   Future<String?> createAlternativeBillingTokenAndroid();
   /// Open the native subscription management surface
-  Future<void> deepLinkToSubscriptions([DeepLinkOptions? options]);
+  Future<void> deepLinkToSubscriptions({
+    String? packageNameAndroid,
+    String? skuAndroid,
+  });
   /// Close the platform billing connection
   Future<bool> endConnection();
   /// Finish a transaction after validating receipts
@@ -2680,7 +2607,9 @@ abstract class MutationResolver {
     bool? isConsumable,
   });
   /// Establish the platform billing connection
-  Future<bool> initConnection([InitConnectionConfig? config]);
+  Future<bool> initConnection({
+    AlternativeBillingModeAndroid? alternativeBillingModeAndroid,
+  });
   /// Present the App Store code redemption sheet
   Future<bool> presentCodeRedemptionSheetIOS();
   /// Initiate a purchase flow; rely on events for final state
@@ -2701,7 +2630,10 @@ abstract class MutationResolver {
   /// Force a StoreKit sync for transactions (iOS 15+)
   Future<bool> syncIOS();
   /// Validate purchase receipts with the configured providers
-  Future<ReceiptValidationResult> validateReceipt(ReceiptValidationProps options);
+  Future<ReceiptValidationResult> validateReceipt({
+    ReceiptValidationAndroidOptions? androidOptions,
+    required String sku,
+  });
 }
 
 /// GraphQL root query operations.
@@ -2709,13 +2641,19 @@ abstract class QueryResolver {
   /// Get current StoreKit 2 entitlements (iOS 15+)
   Future<PurchaseIOS?> currentEntitlementIOS(String sku);
   /// Retrieve products or subscriptions from the store
-  Future<FetchProductsResult> fetchProducts(ProductRequest params);
+  Future<FetchProductsResult> fetchProducts({
+    required List<String> skus,
+    ProductQueryType? type,
+  });
   /// Get active subscriptions (filters by subscriptionIds when provided)
   Future<List<ActiveSubscription>> getActiveSubscriptions([List<String>? subscriptionIds]);
   /// Fetch the current app transaction (iOS 16+)
   Future<AppTransaction?> getAppTransactionIOS();
   /// Get all available purchases for the current user
-  Future<List<Purchase>> getAvailablePurchases([PurchaseOptions? options]);
+  Future<List<Purchase>> getAvailablePurchases({
+    bool? alsoPublishToEventListenerIOS,
+    bool? onlyIncludeActiveItemsIOS,
+  });
   /// Retrieve all pending transactions in the StoreKit queue
   Future<List<PurchaseIOS>> getPendingTransactionsIOS();
   /// Get the currently promoted product (iOS 11+)
@@ -2739,7 +2677,10 @@ abstract class QueryResolver {
   /// Get StoreKit 2 subscription status details (iOS 15+)
   Future<List<SubscriptionStatusIOS>> subscriptionStatusIOS(String sku);
   /// Validate a receipt for a specific product
-  Future<ReceiptValidationResultIOS> validateReceiptIOS(ReceiptValidationProps options);
+  Future<ReceiptValidationResultIOS> validateReceiptIOS({
+    ReceiptValidationAndroidOptions? androidOptions,
+    required String sku,
+  });
 }
 
 /// GraphQL root subscription operations.
@@ -2762,13 +2703,18 @@ typedef MutationCheckAlternativeBillingAvailabilityAndroidHandler = Future<bool>
 typedef MutationClearTransactionIOSHandler = Future<bool> Function();
 typedef MutationConsumePurchaseAndroidHandler = Future<bool> Function(String purchaseToken);
 typedef MutationCreateAlternativeBillingTokenAndroidHandler = Future<String?> Function();
-typedef MutationDeepLinkToSubscriptionsHandler = Future<void> Function([DeepLinkOptions? options]);
+typedef MutationDeepLinkToSubscriptionsHandler = Future<void> Function({
+  String? packageNameAndroid,
+  String? skuAndroid,
+});
 typedef MutationEndConnectionHandler = Future<bool> Function();
 typedef MutationFinishTransactionHandler = Future<void> Function({
   required PurchaseInput purchase,
   bool? isConsumable,
 });
-typedef MutationInitConnectionHandler = Future<bool> Function([InitConnectionConfig? config]);
+typedef MutationInitConnectionHandler = Future<bool> Function({
+  AlternativeBillingModeAndroid? alternativeBillingModeAndroid,
+});
 typedef MutationPresentCodeRedemptionSheetIOSHandler = Future<bool> Function();
 typedef MutationRequestPurchaseHandler = Future<RequestPurchaseResult?> Function(RequestPurchaseProps params);
 typedef MutationRequestPurchaseOnPromotedProductIOSHandler = Future<bool> Function();
@@ -2776,7 +2722,10 @@ typedef MutationRestorePurchasesHandler = Future<void> Function();
 typedef MutationShowAlternativeBillingDialogAndroidHandler = Future<bool> Function();
 typedef MutationShowManageSubscriptionsIOSHandler = Future<List<PurchaseIOS>> Function();
 typedef MutationSyncIOSHandler = Future<bool> Function();
-typedef MutationValidateReceiptHandler = Future<ReceiptValidationResult> Function(ReceiptValidationProps options);
+typedef MutationValidateReceiptHandler = Future<ReceiptValidationResult> Function({
+  ReceiptValidationAndroidOptions? androidOptions,
+  required String sku,
+});
 
 class MutationHandlers {
   const MutationHandlers({
@@ -2823,10 +2772,16 @@ class MutationHandlers {
 // MARK: - Query Helpers
 
 typedef QueryCurrentEntitlementIOSHandler = Future<PurchaseIOS?> Function(String sku);
-typedef QueryFetchProductsHandler = Future<FetchProductsResult> Function(ProductRequest params);
+typedef QueryFetchProductsHandler = Future<FetchProductsResult> Function({
+  required List<String> skus,
+  ProductQueryType? type,
+});
 typedef QueryGetActiveSubscriptionsHandler = Future<List<ActiveSubscription>> Function([List<String>? subscriptionIds]);
 typedef QueryGetAppTransactionIOSHandler = Future<AppTransaction?> Function();
-typedef QueryGetAvailablePurchasesHandler = Future<List<Purchase>> Function([PurchaseOptions? options]);
+typedef QueryGetAvailablePurchasesHandler = Future<List<Purchase>> Function({
+  bool? alsoPublishToEventListenerIOS,
+  bool? onlyIncludeActiveItemsIOS,
+});
 typedef QueryGetPendingTransactionsIOSHandler = Future<List<PurchaseIOS>> Function();
 typedef QueryGetPromotedProductIOSHandler = Future<ProductIOS?> Function();
 typedef QueryGetReceiptDataIOSHandler = Future<String?> Function();
@@ -2838,7 +2793,10 @@ typedef QueryIsEligibleForIntroOfferIOSHandler = Future<bool> Function(String gr
 typedef QueryIsTransactionVerifiedIOSHandler = Future<bool> Function(String sku);
 typedef QueryLatestTransactionIOSHandler = Future<PurchaseIOS?> Function(String sku);
 typedef QuerySubscriptionStatusIOSHandler = Future<List<SubscriptionStatusIOS>> Function(String sku);
-typedef QueryValidateReceiptIOSHandler = Future<ReceiptValidationResultIOS> Function(ReceiptValidationProps options);
+typedef QueryValidateReceiptIOSHandler = Future<ReceiptValidationResultIOS> Function({
+  ReceiptValidationAndroidOptions? androidOptions,
+  required String sku,
+});
 
 class QueryHandlers {
   const QueryHandlers({

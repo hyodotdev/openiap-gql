@@ -497,17 +497,7 @@ public struct ProductRequest: Codable {
     public var type: ProductQueryType?
 }
 
-public struct PurchaseInput: Codable {
-    public var id: String
-    public var ids: [String]?
-    public var isAutoRenewing: Bool
-    public var platform: IapPlatform
-    public var productId: String
-    public var purchaseState: PurchaseState
-    public var purchaseToken: String?
-    public var quantity: Int
-    public var transactionDate: Double
-}
+public typealias PurchaseInput = Purchase
 
 public struct PurchaseOptions: Codable {
     /// Also emit results through the iOS event listeners

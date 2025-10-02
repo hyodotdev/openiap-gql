@@ -541,96 +541,85 @@ const printObject = (objectType) => {
 };
 
 const printInput = (inputType) => {
+  // Alias PurchaseInput to Purchase for cleaner API
+  if (inputType.name === 'PurchaseInput') {
+    lines.push('typedef PurchaseInput = Purchase;');
+    lines.push('');
+    return;
+  }
+
+  // TypeScript-style discriminated union with compile-time safety
   if (inputType.name === 'RequestPurchaseProps') {
     addDocComment(lines, inputType.description);
-    lines.push('class RequestPurchaseProps {');
-    lines.push('  RequestPurchaseProps({');
-    lines.push('    required this.request,');
-    lines.push('    ProductQueryType? type,');
-    lines.push('    this.useAlternativeBilling,');
-    lines.push('  }) : type = type ?? (request is RequestPurchasePropsRequestPurchase');
-    lines.push('          ? ProductQueryType.InApp');
-    lines.push('          : ProductQueryType.Subs) {');
-    lines.push('    if (request is RequestPurchasePropsRequestPurchase && this.type != ProductQueryType.InApp) {');
-    lines.push("      throw ArgumentError('type must be IN_APP when requestPurchase is provided');");
-    lines.push('    }');
-    lines.push('    if (request is RequestPurchasePropsRequestSubscription && this.type != ProductQueryType.Subs) {');
-    lines.push("      throw ArgumentError('type must be SUBS when requestSubscription is provided');");
-    lines.push('    }');
-    lines.push('  }');
+
+    // Sealed class for compile-time type safety
+    lines.push('sealed class RequestPurchaseProps {');
+    lines.push('  const RequestPurchaseProps._();');
     lines.push('');
-    lines.push('  final RequestPurchasePropsRequest request;');
-    lines.push('  final ProductQueryType type;');
-    lines.push('  final bool? useAlternativeBilling;');
+    lines.push('  const factory RequestPurchaseProps.inApp(({');
+    lines.push('    RequestPurchaseIosProps? ios,');
+    lines.push('    RequestPurchaseAndroidProps? android,');
+    lines.push('    bool? useAlternativeBilling,');
+    lines.push('  }) props) = _InAppPurchase;');
     lines.push('');
-    lines.push('  factory RequestPurchaseProps.fromJson(Map<String, dynamic> json) {');
-    lines.push("    final typeValue = json['type'] as String?;");
-    lines.push('    final parsedType = typeValue != null ? ProductQueryType.fromJson(typeValue) : null;');
-    lines.push("    final useAlternativeBilling = json['useAlternativeBilling'] as bool?;");
-    lines.push("    final purchaseJson = json['requestPurchase'] as Map<String, dynamic>?;");
-    lines.push('    if (purchaseJson != null) {');
-    lines.push('      final request = RequestPurchasePropsRequestPurchase(RequestPurchasePropsByPlatforms.fromJson(purchaseJson));');
-    lines.push('      final finalType = parsedType ?? ProductQueryType.InApp;');
-    lines.push('      if (finalType != ProductQueryType.InApp) {');
-    lines.push("        throw ArgumentError('type must be IN_APP when requestPurchase is provided');");
-    lines.push('      }');
-    lines.push('      return RequestPurchaseProps(request: request, type: finalType, useAlternativeBilling: useAlternativeBilling);');
-    lines.push('    }');
-    lines.push("    final subscriptionJson = json['requestSubscription'] as Map<String, dynamic>?;");
-    lines.push('    if (subscriptionJson != null) {');
-    lines.push('      final request = RequestPurchasePropsRequestSubscription(RequestSubscriptionPropsByPlatforms.fromJson(subscriptionJson));');
-    lines.push('      final finalType = parsedType ?? ProductQueryType.Subs;');
-    lines.push('      if (finalType != ProductQueryType.Subs) {');
-    lines.push("        throw ArgumentError('type must be SUBS when requestSubscription is provided');");
-    lines.push('      }');
-    lines.push('      return RequestPurchaseProps(request: request, type: finalType, useAlternativeBilling: useAlternativeBilling);');
-    lines.push('    }');
-    lines.push("    throw ArgumentError('RequestPurchaseProps requires requestPurchase or requestSubscription');");
-    lines.push('  }');
+    lines.push('  const factory RequestPurchaseProps.subs(({');
+    lines.push('    RequestSubscriptionIosProps? ios,');
+    lines.push('    RequestSubscriptionAndroidProps? android,');
+    lines.push('    bool? useAlternativeBilling,');
+    lines.push('  }) props) = _SubsPurchase;');
     lines.push('');
+    lines.push('  Map<String, dynamic> toJson();');
+    lines.push('}');
+    lines.push('');
+
+    // Purchase implementation
+    lines.push('class _InAppPurchase extends RequestPurchaseProps {');
+    lines.push('  const _InAppPurchase(this.props) : super._();');
+    lines.push('  final ({');
+    lines.push('    RequestPurchaseIosProps? ios,');
+    lines.push('    RequestPurchaseAndroidProps? android,');
+    lines.push('    bool? useAlternativeBilling,');
+    lines.push('  }) props;');
+    lines.push('');
+    lines.push('  @override');
     lines.push('  Map<String, dynamic> toJson() {');
-    lines.push('    if (request is RequestPurchasePropsRequestPurchase) {');
-    lines.push('      return {');
-    lines.push("        'requestPurchase': (request as RequestPurchasePropsRequestPurchase).value.toJson(),");
-    lines.push("        'type': type.toJson(),");
-    lines.push("        'useAlternativeBilling': useAlternativeBilling,");
-    lines.push('      };');
-    lines.push('    }');
-    lines.push('    if (request is RequestPurchasePropsRequestSubscription) {');
-    lines.push('      return {');
-    lines.push("        'requestSubscription': (request as RequestPurchasePropsRequestSubscription).value.toJson(),");
-    lines.push("        'type': type.toJson(),");
-    lines.push("        'useAlternativeBilling': useAlternativeBilling,");
-    lines.push('      };');
-    lines.push('    }');
-    lines.push("    throw StateError('Unsupported RequestPurchaseProps request variant');");
-    lines.push('  }');
-    lines.push('');
-    lines.push('  static RequestPurchaseProps inApp({required RequestPurchasePropsByPlatforms request, bool? useAlternativeBilling}) {');
-    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestPurchase(request), type: ProductQueryType.InApp, useAlternativeBilling: useAlternativeBilling);');
-    lines.push('  }');
-    lines.push('');
-    lines.push('  static RequestPurchaseProps subs({required RequestSubscriptionPropsByPlatforms request, bool? useAlternativeBilling}) {');
-    lines.push('    return RequestPurchaseProps(request: RequestPurchasePropsRequestSubscription(request), type: ProductQueryType.Subs, useAlternativeBilling: useAlternativeBilling);');
+    lines.push('    return {');
+    lines.push("      'requestPurchase': {");
+    lines.push("        if (props.ios != null) 'ios': props.ios!.toJson(),");
+    lines.push("        if (props.android != null) 'android': props.android!.toJson(),");
+    lines.push('      },');
+    lines.push("      'type': ProductQueryType.InApp.toJson(),");
+    lines.push("      if (props.useAlternativeBilling != null) 'useAlternativeBilling': props.useAlternativeBilling,");
+    lines.push('    };');
     lines.push('  }');
     lines.push('}');
     lines.push('');
-    lines.push('sealed class RequestPurchasePropsRequest {');
-    lines.push('  const RequestPurchasePropsRequest();');
-    lines.push('}');
+
+    // Subscription implementation
+    lines.push('class _SubsPurchase extends RequestPurchaseProps {');
+    lines.push('  const _SubsPurchase(this.props) : super._();');
+    lines.push('  final ({');
+    lines.push('    RequestSubscriptionIosProps? ios,');
+    lines.push('    RequestSubscriptionAndroidProps? android,');
+    lines.push('    bool? useAlternativeBilling,');
+    lines.push('  }) props;');
     lines.push('');
-    lines.push('class RequestPurchasePropsRequestPurchase extends RequestPurchasePropsRequest {');
-    lines.push('  const RequestPurchasePropsRequestPurchase(this.value);');
-    lines.push('  final RequestPurchasePropsByPlatforms value;');
-    lines.push('}');
-    lines.push('');
-    lines.push('class RequestPurchasePropsRequestSubscription extends RequestPurchasePropsRequest {');
-    lines.push('  const RequestPurchasePropsRequestSubscription(this.value);');
-    lines.push('  final RequestSubscriptionPropsByPlatforms value;');
+    lines.push('  @override');
+    lines.push('  Map<String, dynamic> toJson() {');
+    lines.push('    return {');
+    lines.push("      'requestSubscription': {");
+    lines.push("        if (props.ios != null) 'ios': props.ios!.toJson(),");
+    lines.push("        if (props.android != null) 'android': props.android!.toJson(),");
+    lines.push('      },');
+    lines.push("      'type': ProductQueryType.Subs.toJson(),");
+    lines.push("      if (props.useAlternativeBilling != null) 'useAlternativeBilling': props.useAlternativeBilling,");
+    lines.push('    };');
+    lines.push('  }');
     lines.push('}');
     lines.push('');
     return;
   }
+
   addDocComment(lines, inputType.description);
   lines.push(`class ${inputType.name} {`);
   lines.push(`  const ${inputType.name}({`);
@@ -735,6 +724,19 @@ const printUnion = (unionType) => {
   lines.push('}', '');
 };
 
+const expandInputToParams = (inputTypeName) => {
+  const inputType = typeMap[inputTypeName];
+  if (!inputType || !isInputObjectType(inputType)) return [];
+
+  // Don't expand RequestPurchaseProps - it's now a sealed class union type
+  if (inputTypeName === 'RequestPurchaseProps') {
+    return [];
+  }
+
+  const fields = Object.values(inputType.getFields()).sort((a, b) => a.name.localeCompare(b.name));
+  return fields;
+};
+
 const printOperationInterface = (operationType) => {
   const interfaceName = `${operationType.name}Resolver`;
   addDocComment(lines, operationType.description ?? `GraphQL root ${operationType.name.toLowerCase()} operations.`);
@@ -750,6 +752,49 @@ const printOperationInterface = (operationType) => {
       lines.push(`  Future<${returnType}> ${escapeDartName(field.name)}();`);
       continue;
     }
+
+    // Special handling for v5.x style APIs - expand input objects
+    // Don't expand 'purchase' - keep it as an object
+    const expandableParams = ['params', 'options', 'config', 'props'];
+    const expandableArg = field.args.find(arg => expandableParams.includes(arg.name));
+
+    if (expandableArg) {
+      const namedType = getNamedGraphQLType(expandableArg.type);
+      if (namedType && isInputObjectType(namedType)) {
+        const expandedFields = expandInputToParams(namedType.name);
+        const otherArgs = field.args.filter(arg => arg !== expandableArg);
+
+        if (expandedFields.length > 0) {
+          // Always use named params when expanding
+          lines.push(`  Future<${returnType}> ${escapeDartName(field.name)}({`);
+
+          // Add expanded fields first
+          expandedFields.forEach((f) => {
+            // Handle synthetic fields (e.g., 'request' field in RequestPurchaseProps)
+            if (f.isSynthetic) {
+              lines.push(`    required RequestPurchaseRequest ${escapeDartName(f.name)},`);
+            } else {
+              const { type: argType, nullable: argNullable } = getDartType(f.type);
+              const finalType = `${argType}${argNullable ? '?' : ''}`;
+              const prefix = argNullable ? '' : 'required ';
+              lines.push(`    ${prefix}${finalType} ${escapeDartName(f.name)},`);
+            }
+          });
+
+          // Add other args
+          otherArgs.forEach((arg) => {
+            const { type: argType, nullable: argNullable } = getDartType(arg.type);
+            const finalType = `${argType}${argNullable ? '?' : ''}`;
+            const prefix = argNullable ? '' : 'required ';
+            lines.push(`    ${prefix}${finalType} ${escapeDartName(arg.name)},`);
+          });
+
+          lines.push('  });');
+          continue;
+        }
+      }
+    }
+
     if (field.args.length === 1) {
       const arg = field.args[0];
       const { type: argType, nullable: argNullable } = getDartType(arg.type);
@@ -791,6 +836,49 @@ const printOperationHelpers = (operationType) => {
       lines.push(`typedef ${aliasName} = Future<${returnType}> Function();`);
       return;
     }
+
+    // Special handling for v5.x style APIs - expand input objects
+    // Don't expand 'purchase' - keep it as an object
+    const expandableParams = ['params', 'options', 'config', 'props'];
+    const expandableArg = field.args.find(arg => expandableParams.includes(arg.name));
+
+    if (expandableArg) {
+      const namedType = getNamedGraphQLType(expandableArg.type);
+      if (namedType && isInputObjectType(namedType)) {
+        const expandedFields = expandInputToParams(namedType.name);
+        const otherArgs = field.args.filter(arg => arg !== expandableArg);
+
+        if (expandedFields.length > 0) {
+          // Always use named params when expanding
+          lines.push(`typedef ${aliasName} = Future<${returnType}> Function({`);
+
+          // Add expanded fields first
+          expandedFields.forEach((f) => {
+            // Handle synthetic fields (e.g., 'request' field in RequestPurchaseProps)
+            if (f.isSynthetic) {
+              lines.push(`  required RequestPurchaseRequest ${escapeDartName(f.name)},`);
+            } else {
+              const { type: argType, nullable: argNullable } = getDartType(f.type);
+              const finalType = `${argType}${argNullable ? '?' : ''}`;
+              const prefix = argNullable ? '' : 'required ';
+              lines.push(`  ${prefix}${finalType} ${escapeDartName(f.name)},`);
+            }
+          });
+
+          // Add other args
+          otherArgs.forEach((arg) => {
+            const { type: argType, nullable: argNullable } = getDartType(arg.type);
+            const finalType = `${argType}${argNullable ? '?' : ''}`;
+            const prefix = argNullable ? '' : 'required ';
+            lines.push(`  ${prefix}${finalType} ${escapeDartName(arg.name)},`);
+          });
+
+          lines.push('});');
+          return;
+        }
+      }
+    }
+
     if (field.args.length === 1) {
       const arg = field.args[0];
       const { type: argType, nullable: argNullable } = getDartType(arg.type);

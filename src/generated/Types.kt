@@ -1641,45 +1641,7 @@ public data class ProductRequest(
     )
 }
 
-public data class PurchaseInput(
-    val id: String,
-    val ids: List<String>? = null,
-    val isAutoRenewing: Boolean,
-    val platform: IapPlatform,
-    val productId: String,
-    val purchaseState: PurchaseState,
-    val purchaseToken: String? = null,
-    val quantity: Int,
-    val transactionDate: Double
-) {
-    companion object {
-        fun fromJson(json: Map<String, Any?>): PurchaseInput {
-            return PurchaseInput(
-                id = json["id"] as String,
-                ids = (json["ids"] as List<*>?)?.map { it as String },
-                isAutoRenewing = json["isAutoRenewing"] as Boolean,
-                platform = IapPlatform.fromJson(json["platform"] as String),
-                productId = json["productId"] as String,
-                purchaseState = PurchaseState.fromJson(json["purchaseState"] as String),
-                purchaseToken = json["purchaseToken"] as String?,
-                quantity = (json["quantity"] as Number).toInt(),
-                transactionDate = (json["transactionDate"] as Number).toDouble(),
-            )
-        }
-    }
-
-    fun toJson(): Map<String, Any?> = mapOf(
-        "id" to id,
-        "ids" to ids?.map { it },
-        "isAutoRenewing" to isAutoRenewing,
-        "platform" to platform.toJson(),
-        "productId" to productId,
-        "purchaseState" to purchaseState.toJson(),
-        "purchaseToken" to purchaseToken,
-        "quantity" to quantity,
-        "transactionDate" to transactionDate,
-    )
-}
+public typealias PurchaseInput = Purchase
 
 public data class PurchaseOptions(
     /**
