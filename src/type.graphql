@@ -57,6 +57,13 @@ interface PurchaseCommon {
   quantity: Int!
   purchaseState: PurchaseState!
   isAutoRenewing: Boolean!
+  """
+  The current plan identifier. This is:
+  - On Android: the basePlanId (e.g., "premium", "premium-year")
+  - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+  This provides a unified way to identify which specific plan/tier the user is subscribed to.
+  """
+  currentPlanId: String
 }
 
 # Unions for platform-specific types
@@ -203,6 +210,14 @@ type ActiveSubscription {
   transactionId: String!
   purchaseToken: String
   transactionDate: Float!
+  basePlanIdAndroid: String
+  """
+  The current plan identifier. This is:
+  - On Android: the basePlanId (e.g., "premium", "premium-year")
+  - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+  This provides a unified way to identify which specific plan/tier the user is subscribed to.
+  """
+  currentPlanId: String
 }
 
 # Initialization configuration

@@ -5,6 +5,14 @@
 
 export interface ActiveSubscription {
   autoRenewingAndroid?: (boolean | null);
+  basePlanIdAndroid?: (string | null);
+  /**
+   * The current plan identifier. This is:
+   * - On Android: the basePlanId (e.g., "premium", "premium-year")
+   * - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+   * This provides a unified way to identify which specific plan/tier the user is subscribed to.
+   */
+  currentPlanId?: (string | null);
   daysUntilExpirationIOS?: (number | null);
   environmentIOS?: (string | null);
   expirationDateIOS?: (number | null);
@@ -381,6 +389,7 @@ export type Purchase = PurchaseAndroid | PurchaseIOS;
 
 export interface PurchaseAndroid extends PurchaseCommon {
   autoRenewingAndroid?: (boolean | null);
+  currentPlanId?: (string | null);
   dataAndroid?: (string | null);
   developerPayloadAndroid?: (string | null);
   id: string;
@@ -401,6 +410,13 @@ export interface PurchaseAndroid extends PurchaseCommon {
 }
 
 export interface PurchaseCommon {
+  /**
+   * The current plan identifier. This is:
+   * - On Android: the basePlanId (e.g., "premium", "premium-year")
+   * - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+   * This provides a unified way to identify which specific plan/tier the user is subscribed to.
+   */
+  currentPlanId?: (string | null);
   id: string;
   ids?: (string[] | null);
   isAutoRenewing: boolean;
@@ -425,6 +441,7 @@ export interface PurchaseIOS extends PurchaseCommon {
   countryCodeIOS?: (string | null);
   currencyCodeIOS?: (string | null);
   currencySymbolIOS?: (string | null);
+  currentPlanId?: (string | null);
   environmentIOS?: (string | null);
   expirationDateIOS?: (number | null);
   id: string;

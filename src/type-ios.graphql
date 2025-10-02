@@ -132,6 +132,7 @@ type PurchaseIOS implements PurchaseCommon {
   quantity: Int!
   purchaseState: PurchaseState!
   isAutoRenewing: Boolean!
+  currentPlanId: String
 
   # iOS-specific fields
   transactionId: String!

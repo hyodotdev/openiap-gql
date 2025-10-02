@@ -131,6 +131,11 @@ public protocol ProductCommon: Codable {
 }
 
 public protocol PurchaseCommon: Codable {
+    /// The current plan identifier. This is:
+    /// - On Android: the basePlanId (e.g., "premium", "premium-year")
+    /// - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+    /// This provides a unified way to identify which specific plan/tier the user is subscribed to.
+    var currentPlanId: String? { get }
     var id: String { get }
     var ids: [String]? { get }
     var isAutoRenewing: Bool { get }
@@ -147,6 +152,12 @@ public protocol PurchaseCommon: Codable {
 
 public struct ActiveSubscription: Codable {
     public var autoRenewingAndroid: Bool?
+    public var basePlanIdAndroid: String?
+    /// The current plan identifier. This is:
+    /// - On Android: the basePlanId (e.g., "premium", "premium-year")
+    /// - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+    /// This provides a unified way to identify which specific plan/tier the user is subscribed to.
+    public var currentPlanId: String?
     public var daysUntilExpirationIOS: Double?
     public var environmentIOS: String?
     public var expirationDateIOS: Double?
@@ -314,6 +325,7 @@ public struct ProductSubscriptionIOS: Codable, ProductCommon {
 
 public struct PurchaseAndroid: Codable, PurchaseCommon {
     public var autoRenewingAndroid: Bool?
+    public var currentPlanId: String?
     public var dataAndroid: String?
     public var developerPayloadAndroid: String?
     public var id: String
@@ -345,6 +357,7 @@ public struct PurchaseIOS: Codable, PurchaseCommon {
     public var countryCodeIOS: String?
     public var currencyCodeIOS: String?
     public var currencySymbolIOS: String?
+    public var currentPlanId: String?
     public var environmentIOS: String?
     public var expirationDateIOS: Double?
     public var id: String
@@ -852,6 +865,19 @@ public enum ProductSubscription: Codable, ProductCommon {
 public enum Purchase: Codable, PurchaseCommon {
     case purchaseAndroid(PurchaseAndroid)
     case purchaseIos(PurchaseIOS)
+
+    /// The current plan identifier. This is:
+    /// - On Android: the basePlanId (e.g., "premium", "premium-year")
+    /// - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+    /// This provides a unified way to identify which specific plan/tier the user is subscribed to.
+    public var currentPlanId: String? {
+        switch self {
+        case let .purchaseAndroid(value):
+            return value.currentPlanId
+        case let .purchaseIos(value):
+            return value.currentPlanId
+        }
+    }
 
     public var id: String {
         switch self {

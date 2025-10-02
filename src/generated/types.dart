@@ -522,6 +522,11 @@ abstract class ProductCommon {
 }
 
 abstract class PurchaseCommon {
+  /// The current plan identifier. This is:
+  /// - On Android: the basePlanId (e.g., "premium", "premium-year")
+  /// - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+  /// This provides a unified way to identify which specific plan/tier the user is subscribed to.
+  String? get currentPlanId;
   String get id;
   List<String>? get ids;
   bool get isAutoRenewing;
@@ -539,6 +544,12 @@ abstract class PurchaseCommon {
 class ActiveSubscription {
   const ActiveSubscription({
     this.autoRenewingAndroid,
+    this.basePlanIdAndroid,
+    /// The current plan identifier. This is:
+    /// - On Android: the basePlanId (e.g., "premium", "premium-year")
+    /// - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+    /// This provides a unified way to identify which specific plan/tier the user is subscribed to.
+    this.currentPlanId,
     this.daysUntilExpirationIOS,
     this.environmentIOS,
     this.expirationDateIOS,
@@ -551,6 +562,12 @@ class ActiveSubscription {
   });
 
   final bool? autoRenewingAndroid;
+  final String? basePlanIdAndroid;
+  /// The current plan identifier. This is:
+  /// - On Android: the basePlanId (e.g., "premium", "premium-year")
+  /// - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+  /// This provides a unified way to identify which specific plan/tier the user is subscribed to.
+  final String? currentPlanId;
   final double? daysUntilExpirationIOS;
   final String? environmentIOS;
   final double? expirationDateIOS;
@@ -564,6 +581,8 @@ class ActiveSubscription {
   factory ActiveSubscription.fromJson(Map<String, dynamic> json) {
     return ActiveSubscription(
       autoRenewingAndroid: json['autoRenewingAndroid'] as bool?,
+      basePlanIdAndroid: json['basePlanIdAndroid'] as String?,
+      currentPlanId: json['currentPlanId'] as String?,
       daysUntilExpirationIOS: (json['daysUntilExpirationIOS'] as num?)?.toDouble(),
       environmentIOS: json['environmentIOS'] as String?,
       expirationDateIOS: (json['expirationDateIOS'] as num?)?.toDouble(),
@@ -580,6 +599,8 @@ class ActiveSubscription {
     return {
       '__typename': 'ActiveSubscription',
       'autoRenewingAndroid': autoRenewingAndroid,
+      'basePlanIdAndroid': basePlanIdAndroid,
+      'currentPlanId': currentPlanId,
       'daysUntilExpirationIOS': daysUntilExpirationIOS,
       'environmentIOS': environmentIOS,
       'expirationDateIOS': expirationDateIOS,
@@ -1260,6 +1281,7 @@ class ProductSubscriptionIOS extends ProductSubscription implements ProductCommo
 class PurchaseAndroid extends Purchase implements PurchaseCommon {
   const PurchaseAndroid({
     this.autoRenewingAndroid,
+    this.currentPlanId,
     this.dataAndroid,
     this.developerPayloadAndroid,
     required this.id,
@@ -1281,6 +1303,7 @@ class PurchaseAndroid extends Purchase implements PurchaseCommon {
   });
 
   final bool? autoRenewingAndroid;
+  final String? currentPlanId;
   final String? dataAndroid;
   final String? developerPayloadAndroid;
   final String id;
@@ -1303,6 +1326,7 @@ class PurchaseAndroid extends Purchase implements PurchaseCommon {
   factory PurchaseAndroid.fromJson(Map<String, dynamic> json) {
     return PurchaseAndroid(
       autoRenewingAndroid: json['autoRenewingAndroid'] as bool?,
+      currentPlanId: json['currentPlanId'] as String?,
       dataAndroid: json['dataAndroid'] as String?,
       developerPayloadAndroid: json['developerPayloadAndroid'] as String?,
       id: json['id'] as String,
@@ -1329,6 +1353,7 @@ class PurchaseAndroid extends Purchase implements PurchaseCommon {
     return {
       '__typename': 'PurchaseAndroid',
       'autoRenewingAndroid': autoRenewingAndroid,
+      'currentPlanId': currentPlanId,
       'dataAndroid': dataAndroid,
       'developerPayloadAndroid': developerPayloadAndroid,
       'id': id,
@@ -1387,6 +1412,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
     this.countryCodeIOS,
     this.currencyCodeIOS,
     this.currencySymbolIOS,
+    this.currentPlanId,
     this.environmentIOS,
     this.expirationDateIOS,
     required this.id,
@@ -1421,6 +1447,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
   final String? countryCodeIOS;
   final String? currencyCodeIOS;
   final String? currencySymbolIOS;
+  final String? currentPlanId;
   final String? environmentIOS;
   final double? expirationDateIOS;
   final String id;
@@ -1456,6 +1483,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
       countryCodeIOS: json['countryCodeIOS'] as String?,
       currencyCodeIOS: json['currencyCodeIOS'] as String?,
       currencySymbolIOS: json['currencySymbolIOS'] as String?,
+      currentPlanId: json['currentPlanId'] as String?,
       environmentIOS: json['environmentIOS'] as String?,
       expirationDateIOS: (json['expirationDateIOS'] as num?)?.toDouble(),
       id: json['id'] as String,
@@ -1495,6 +1523,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
       'countryCodeIOS': countryCodeIOS,
       'currencyCodeIOS': currencyCodeIOS,
       'currencySymbolIOS': currencySymbolIOS,
+      'currentPlanId': currentPlanId,
       'environmentIOS': environmentIOS,
       'expirationDateIOS': expirationDateIOS,
       'id': id,
@@ -2528,6 +2557,12 @@ sealed class Purchase implements PurchaseCommon {
     throw ArgumentError('Unknown __typename for Purchase: $typeName');
   }
 
+  /// The current plan identifier. This is:
+  /// - On Android: the basePlanId (e.g., "premium", "premium-year")
+  /// - On iOS: the productId (e.g., "com.example.premium_monthly", "com.example.premium_yearly")
+  /// This provides a unified way to identify which specific plan/tier the user is subscribed to.
+  @override
+  String? get currentPlanId;
   @override
   String get id;
   @override
