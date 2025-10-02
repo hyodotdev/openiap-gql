@@ -78,6 +78,7 @@ type PurchaseAndroid implements PurchaseCommon {
   quantity: Int!
   purchaseState: PurchaseState!
   isAutoRenewing: Boolean!
+  currentPlanId: String
 
   # Android-specific fields
   dataAndroid: String
