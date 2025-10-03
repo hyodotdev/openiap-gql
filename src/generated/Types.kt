@@ -675,6 +675,36 @@ public data class EntitlementIOS(
     )
 }
 
+/**
+ * Result of presenting an external purchase link (iOS 18.2+)
+ */
+public data class ExternalPurchaseLinkResultIOS(
+    /**
+     * Optional error message if the presentation failed
+     */
+    val error: String? = null,
+    /**
+     * Whether the user completed the external purchase flow
+     */
+    val success: Boolean
+) {
+
+    companion object {
+        fun fromJson(json: Map<String, Any?>): ExternalPurchaseLinkResultIOS {
+            return ExternalPurchaseLinkResultIOS(
+                error = json["error"] as String?,
+                success = json["success"] as Boolean,
+            )
+        }
+    }
+
+    fun toJson(): Map<String, Any?> = mapOf(
+        "__typename" to "ExternalPurchaseLinkResultIOS",
+        "error" to error,
+        "success" to success,
+    )
+}
+
 public sealed interface FetchProductsResult
 
 public data class FetchProductsResultProducts(val value: List<Product>?) : FetchProductsResult
@@ -2146,6 +2176,10 @@ public interface MutationResolver {
      */
     suspend fun presentCodeRedemptionSheetIOS(): Boolean
     /**
+     * Present external purchase custom link with StoreKit UI (iOS 18.2+)
+     */
+    suspend fun presentExternalPurchaseLinkIOS(url: String): ExternalPurchaseLinkResultIOS
+    /**
      * Initiate a purchase flow; rely on events for final state
      */
     suspend fun requestPurchase(params: RequestPurchaseProps): RequestPurchaseResult?
@@ -2287,6 +2321,7 @@ public typealias MutationEndConnectionHandler = suspend () -> Boolean
 public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> Unit
 public typealias MutationInitConnectionHandler = suspend (config: InitConnectionConfig?) -> Boolean
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> Boolean
+public typealias MutationPresentExternalPurchaseLinkIOSHandler = suspend (url: String) -> ExternalPurchaseLinkResultIOS
 public typealias MutationRequestPurchaseHandler = suspend (params: RequestPurchaseProps) -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> Boolean
 public typealias MutationRestorePurchasesHandler = suspend () -> Unit
@@ -2307,6 +2342,7 @@ public data class MutationHandlers(
     val finishTransaction: MutationFinishTransactionHandler? = null,
     val initConnection: MutationInitConnectionHandler? = null,
     val presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler? = null,
+    val presentExternalPurchaseLinkIOS: MutationPresentExternalPurchaseLinkIOSHandler? = null,
     val requestPurchase: MutationRequestPurchaseHandler? = null,
     val requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = null,
     val restorePurchases: MutationRestorePurchasesHandler? = null,

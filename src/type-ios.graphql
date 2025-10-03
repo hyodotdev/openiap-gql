@@ -312,3 +312,17 @@ type AppTransaction {
   appTransactionId: String
   originalPlatform: String
 }
+
+"""
+Result of presenting an external purchase link (iOS 18.2+)
+"""
+type ExternalPurchaseLinkResultIOS {
+  """
+  Whether the user completed the external purchase flow
+  """
+  success: Boolean!
+  """
+  Optional error message if the presentation failed
+  """
+  error: String
+}

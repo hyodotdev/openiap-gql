@@ -814,6 +814,36 @@ class EntitlementIOS {
   }
 }
 
+/// Result of presenting an external purchase link (iOS 18.2+)
+class ExternalPurchaseLinkResultIOS {
+  const ExternalPurchaseLinkResultIOS({
+    /// Optional error message if the presentation failed
+    this.error,
+    /// Whether the user completed the external purchase flow
+    required this.success,
+  });
+
+  /// Optional error message if the presentation failed
+  final String? error;
+  /// Whether the user completed the external purchase flow
+  final bool success;
+
+  factory ExternalPurchaseLinkResultIOS.fromJson(Map<String, dynamic> json) {
+    return ExternalPurchaseLinkResultIOS(
+      error: json['error'] as String?,
+      success: json['success'] as bool,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '__typename': 'ExternalPurchaseLinkResultIOS',
+      'error': error,
+      'success': success,
+    };
+  }
+}
+
 abstract class FetchProductsResult {
   const FetchProductsResult();
 }
@@ -2653,6 +2683,8 @@ abstract class MutationResolver {
   });
   /// Present the App Store code redemption sheet
   Future<bool> presentCodeRedemptionSheetIOS();
+  /// Present external purchase custom link with StoreKit UI (iOS 18.2+)
+  Future<ExternalPurchaseLinkResultIOS> presentExternalPurchaseLinkIOS(String url);
   /// Initiate a purchase flow; rely on events for final state
   Future<RequestPurchaseResult?> requestPurchase(RequestPurchaseProps params);
   /// Purchase the promoted product surfaced by the App Store
@@ -2757,6 +2789,7 @@ typedef MutationInitConnectionHandler = Future<bool> Function({
   AlternativeBillingModeAndroid? alternativeBillingModeAndroid,
 });
 typedef MutationPresentCodeRedemptionSheetIOSHandler = Future<bool> Function();
+typedef MutationPresentExternalPurchaseLinkIOSHandler = Future<ExternalPurchaseLinkResultIOS> Function(String url);
 typedef MutationRequestPurchaseHandler = Future<RequestPurchaseResult?> Function(RequestPurchaseProps params);
 typedef MutationRequestPurchaseOnPromotedProductIOSHandler = Future<bool> Function();
 typedef MutationRestorePurchasesHandler = Future<void> Function();
@@ -2781,6 +2814,7 @@ class MutationHandlers {
     this.finishTransaction,
     this.initConnection,
     this.presentCodeRedemptionSheetIOS,
+    this.presentExternalPurchaseLinkIOS,
     this.requestPurchase,
     this.requestPurchaseOnPromotedProductIOS,
     this.restorePurchases,
@@ -2801,6 +2835,7 @@ class MutationHandlers {
   final MutationFinishTransactionHandler? finishTransaction;
   final MutationInitConnectionHandler? initConnection;
   final MutationPresentCodeRedemptionSheetIOSHandler? presentCodeRedemptionSheetIOS;
+  final MutationPresentExternalPurchaseLinkIOSHandler? presentExternalPurchaseLinkIOS;
   final MutationRequestPurchaseHandler? requestPurchase;
   final MutationRequestPurchaseOnPromotedProductIOSHandler? requestPurchaseOnPromotedProductIOS;
   final MutationRestorePurchasesHandler? restorePurchases;

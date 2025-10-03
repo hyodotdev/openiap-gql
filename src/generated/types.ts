@@ -142,6 +142,14 @@ export enum ErrorCode {
   UserError = 'user-error'
 }
 
+/** Result of presenting an external purchase link (iOS 18.2+) */
+export interface ExternalPurchaseLinkResultIOS {
+  /** Optional error message if the presentation failed */
+  error?: (string | null);
+  /** Whether the user completed the external purchase flow */
+  success: boolean;
+}
+
 export type FetchProductsResult = Product[] | ProductSubscription[] | null;
 
 export type IapEvent = 'purchase-updated' | 'purchase-error' | 'promoted-product-ios';
@@ -194,6 +202,8 @@ export interface Mutation {
   initConnection: Promise<boolean>;
   /** Present the App Store code redemption sheet */
   presentCodeRedemptionSheetIOS: Promise<boolean>;
+  /** Present external purchase custom link with StoreKit UI (iOS 18.2+) */
+  presentExternalPurchaseLinkIOS: Promise<ExternalPurchaseLinkResultIOS>;
   /** Initiate a purchase flow; rely on events for final state */
   requestPurchase?: Promise<(Purchase | Purchase[] | null)>;
   /** Purchase the promoted product surfaced by the App Store */
@@ -234,6 +244,8 @@ export interface MutationFinishTransactionArgs {
 
 
 export type MutationInitConnectionArgs = (InitConnectionConfig | null) | undefined;
+
+export type MutationPresentExternalPurchaseLinkIosArgs = string;
 
 export type MutationRequestPurchaseArgs =
   | {
@@ -786,6 +798,7 @@ export type MutationArgsMap = {
   finishTransaction: MutationFinishTransactionArgs;
   initConnection: MutationInitConnectionArgs;
   presentCodeRedemptionSheetIOS: never;
+  presentExternalPurchaseLinkIOS: MutationPresentExternalPurchaseLinkIosArgs;
   requestPurchase: MutationRequestPurchaseArgs;
   requestPurchaseOnPromotedProductIOS: never;
   restorePurchases: never;

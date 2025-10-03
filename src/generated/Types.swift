@@ -217,6 +217,14 @@ public struct EntitlementIOS: Codable {
     public var transactionId: String
 }
 
+/// Result of presenting an external purchase link (iOS 18.2+)
+public struct ExternalPurchaseLinkResultIOS: Codable {
+    /// Optional error message if the presentation failed
+    public var error: String?
+    /// Whether the user completed the external purchase flow
+    public var success: Bool
+}
+
 public enum FetchProductsResult {
     case products([Product]?)
     case subscriptions([ProductSubscription]?)
@@ -1155,6 +1163,8 @@ public protocol MutationResolver {
     func initConnection(_ config: InitConnectionConfig?) async throws -> Bool
     /// Present the App Store code redemption sheet
     func presentCodeRedemptionSheetIOS() async throws -> Bool
+    /// Present external purchase custom link with StoreKit UI (iOS 18.2+)
+    func presentExternalPurchaseLinkIOS(_ url: String) async throws -> ExternalPurchaseLinkResultIOS
     /// Initiate a purchase flow; rely on events for final state
     func requestPurchase(_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
     /// Purchase the promoted product surfaced by the App Store
@@ -1239,6 +1249,7 @@ public typealias MutationEndConnectionHandler = () async throws -> Bool
 public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, _ isConsumable: Bool?) async throws -> Void
 public typealias MutationInitConnectionHandler = (_ config: InitConnectionConfig?) async throws -> Bool
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = () async throws -> Bool
+public typealias MutationPresentExternalPurchaseLinkIOSHandler = (_ url: String) async throws -> ExternalPurchaseLinkResultIOS
 public typealias MutationRequestPurchaseHandler = (_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = () async throws -> Bool
 public typealias MutationRestorePurchasesHandler = () async throws -> Void
@@ -1259,6 +1270,7 @@ public struct MutationHandlers {
     public var finishTransaction: MutationFinishTransactionHandler?
     public var initConnection: MutationInitConnectionHandler?
     public var presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler?
+    public var presentExternalPurchaseLinkIOS: MutationPresentExternalPurchaseLinkIOSHandler?
     public var requestPurchase: MutationRequestPurchaseHandler?
     public var requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler?
     public var restorePurchases: MutationRestorePurchasesHandler?
@@ -1279,6 +1291,7 @@ public struct MutationHandlers {
         finishTransaction: MutationFinishTransactionHandler? = nil,
         initConnection: MutationInitConnectionHandler? = nil,
         presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler? = nil,
+        presentExternalPurchaseLinkIOS: MutationPresentExternalPurchaseLinkIOSHandler? = nil,
         requestPurchase: MutationRequestPurchaseHandler? = nil,
         requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = nil,
         restorePurchases: MutationRestorePurchasesHandler? = nil,
@@ -1298,6 +1311,7 @@ public struct MutationHandlers {
         self.finishTransaction = finishTransaction
         self.initConnection = initConnection
         self.presentCodeRedemptionSheetIOS = presentCodeRedemptionSheetIOS
+        self.presentExternalPurchaseLinkIOS = presentExternalPurchaseLinkIOS
         self.requestPurchase = requestPurchase
         self.requestPurchaseOnPromotedProductIOS = requestPurchaseOnPromotedProductIOS
         self.restorePurchases = restorePurchases

@@ -94,4 +94,9 @@ extend type Mutation {
   """
   # Future
   presentCodeRedemptionSheetIOS: Boolean!
+  """
+  Present external purchase custom link with StoreKit UI (iOS 18.2+)
+  """
+  # Future
+  presentExternalPurchaseLinkIOS(url: String!): ExternalPurchaseLinkResultIOS!
 }
