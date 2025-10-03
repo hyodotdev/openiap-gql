@@ -226,6 +226,33 @@ enum ErrorCode {
   String toJson() => value;
 }
 
+/// User actions on external purchase notice sheet (iOS 18.2+)
+enum ExternalPurchaseNoticeAction {
+  /// User chose to continue to external purchase
+  Continue('continue'),
+  /// User dismissed the notice sheet
+  Dismissed('dismissed');
+
+  const ExternalPurchaseNoticeAction(this.value);
+  final String value;
+
+  factory ExternalPurchaseNoticeAction.fromJson(String value) {
+    switch (value) {
+      case 'continue':
+      case 'CONTINUE':
+      case 'Continue':
+        return ExternalPurchaseNoticeAction.Continue;
+      case 'dismissed':
+      case 'DISMISSED':
+      case 'Dismissed':
+        return ExternalPurchaseNoticeAction.Dismissed;
+    }
+    throw ArgumentError('Unknown ExternalPurchaseNoticeAction value: $value');
+  }
+
+  String toJson() => value;
+}
+
 enum IapEvent {
   PurchaseUpdated('purchase-updated'),
   PurchaseError('purchase-error'),
@@ -840,6 +867,36 @@ class ExternalPurchaseLinkResultIOS {
       '__typename': 'ExternalPurchaseLinkResultIOS',
       'error': error,
       'success': success,
+    };
+  }
+}
+
+/// Result of presenting external purchase notice sheet (iOS 18.2+)
+class ExternalPurchaseNoticeResultIOS {
+  const ExternalPurchaseNoticeResultIOS({
+    /// Optional error message if the presentation failed
+    this.error,
+    /// Notice result indicating user action
+    required this.result,
+  });
+
+  /// Optional error message if the presentation failed
+  final String? error;
+  /// Notice result indicating user action
+  final ExternalPurchaseNoticeAction result;
+
+  factory ExternalPurchaseNoticeResultIOS.fromJson(Map<String, dynamic> json) {
+    return ExternalPurchaseNoticeResultIOS(
+      error: json['error'] as String?,
+      result: ExternalPurchaseNoticeAction.fromJson(json['result'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '__typename': 'ExternalPurchaseNoticeResultIOS',
+      'error': error,
+      'result': result.toJson(),
     };
   }
 }
@@ -1948,6 +2005,37 @@ class SubscriptionStatusIOS {
   }
 }
 
+/// User Choice Billing event details (Android)
+/// Fired when a user selects alternative billing in the User Choice Billing dialog
+class UserChoiceBillingDetails {
+  const UserChoiceBillingDetails({
+    /// Token that must be reported to Google Play within 24 hours
+    required this.externalTransactionToken,
+    /// List of product IDs selected by the user
+    required this.products,
+  });
+
+  /// Token that must be reported to Google Play within 24 hours
+  final String externalTransactionToken;
+  /// List of product IDs selected by the user
+  final List<String> products;
+
+  factory UserChoiceBillingDetails.fromJson(Map<String, dynamic> json) {
+    return UserChoiceBillingDetails(
+      externalTransactionToken: json['externalTransactionToken'] as String,
+      products: (json['products'] as List<dynamic>).map((e) => e as String).toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '__typename': 'UserChoiceBillingDetails',
+      'externalTransactionToken': externalTransactionToken,
+      'products': products.map((e) => e).toList(),
+    };
+  }
+}
+
 typedef VoidResult = void;
 
 // MARK: - Input Objects
@@ -2239,8 +2327,6 @@ class RequestPurchaseIosProps {
     this.andDangerouslyFinishTransactionAutomatically,
     /// App account token for user tracking
     this.appAccountToken,
-    /// External purchase URL for alternative billing (iOS)
-    this.externalPurchaseUrl,
     /// Purchase quantity
     this.quantity,
     /// Product SKU
@@ -2253,8 +2339,6 @@ class RequestPurchaseIosProps {
   final bool? andDangerouslyFinishTransactionAutomatically;
   /// App account token for user tracking
   final String? appAccountToken;
-  /// External purchase URL for alternative billing (iOS)
-  final String? externalPurchaseUrl;
   /// Purchase quantity
   final int? quantity;
   /// Product SKU
@@ -2266,7 +2350,6 @@ class RequestPurchaseIosProps {
     return RequestPurchaseIosProps(
       andDangerouslyFinishTransactionAutomatically: json['andDangerouslyFinishTransactionAutomatically'] as bool?,
       appAccountToken: json['appAccountToken'] as String?,
-      externalPurchaseUrl: json['externalPurchaseUrl'] as String?,
       quantity: json['quantity'] as int?,
       sku: json['sku'] as String,
       withOffer: json['withOffer'] != null ? DiscountOfferInputIOS.fromJson(json['withOffer'] as Map<String, dynamic>) : null,
@@ -2277,7 +2360,6 @@ class RequestPurchaseIosProps {
     return {
       'andDangerouslyFinishTransactionAutomatically': andDangerouslyFinishTransactionAutomatically,
       'appAccountToken': appAccountToken,
-      'externalPurchaseUrl': externalPurchaseUrl,
       'quantity': quantity,
       'sku': sku,
       'withOffer': withOffer?.toJson(),
@@ -2435,8 +2517,6 @@ class RequestSubscriptionIosProps {
   const RequestSubscriptionIosProps({
     this.andDangerouslyFinishTransactionAutomatically,
     this.appAccountToken,
-    /// External purchase URL for alternative billing (iOS)
-    this.externalPurchaseUrl,
     this.quantity,
     required this.sku,
     this.withOffer,
@@ -2444,8 +2524,6 @@ class RequestSubscriptionIosProps {
 
   final bool? andDangerouslyFinishTransactionAutomatically;
   final String? appAccountToken;
-  /// External purchase URL for alternative billing (iOS)
-  final String? externalPurchaseUrl;
   final int? quantity;
   final String sku;
   final DiscountOfferInputIOS? withOffer;
@@ -2454,7 +2532,6 @@ class RequestSubscriptionIosProps {
     return RequestSubscriptionIosProps(
       andDangerouslyFinishTransactionAutomatically: json['andDangerouslyFinishTransactionAutomatically'] as bool?,
       appAccountToken: json['appAccountToken'] as String?,
-      externalPurchaseUrl: json['externalPurchaseUrl'] as String?,
       quantity: json['quantity'] as int?,
       sku: json['sku'] as String,
       withOffer: json['withOffer'] != null ? DiscountOfferInputIOS.fromJson(json['withOffer'] as Map<String, dynamic>) : null,
@@ -2465,7 +2542,6 @@ class RequestSubscriptionIosProps {
     return {
       'andDangerouslyFinishTransactionAutomatically': andDangerouslyFinishTransactionAutomatically,
       'appAccountToken': appAccountToken,
-      'externalPurchaseUrl': externalPurchaseUrl,
       'quantity': quantity,
       'sku': sku,
       'withOffer': withOffer?.toJson(),
@@ -2685,6 +2761,8 @@ abstract class MutationResolver {
   Future<bool> presentCodeRedemptionSheetIOS();
   /// Present external purchase custom link with StoreKit UI (iOS 18.2+)
   Future<ExternalPurchaseLinkResultIOS> presentExternalPurchaseLinkIOS(String url);
+  /// Present external purchase notice sheet (iOS 18.2+)
+  Future<ExternalPurchaseNoticeResultIOS> presentExternalPurchaseNoticeSheetIOS();
   /// Initiate a purchase flow; rely on events for final state
   Future<RequestPurchaseResult?> requestPurchase(RequestPurchaseProps params);
   /// Purchase the promoted product surfaced by the App Store
@@ -2711,6 +2789,8 @@ abstract class MutationResolver {
 
 /// GraphQL root query operations.
 abstract class QueryResolver {
+  /// Check if external purchase notice sheet can be presented (iOS 18.2+)
+  Future<bool> canPresentExternalPurchaseNoticeIOS();
   /// Get current StoreKit 2 entitlements (iOS 15+)
   Future<PurchaseIOS?> currentEntitlementIOS(String sku);
   /// Retrieve products or subscriptions from the store
@@ -2764,6 +2844,9 @@ abstract class SubscriptionResolver {
   Future<PurchaseError> purchaseError();
   /// Fires when a purchase completes successfully or a pending purchase resolves
   Future<Purchase> purchaseUpdated();
+  /// Fires when a user selects alternative billing in the User Choice Billing dialog (Android only)
+  /// Only triggered when the user selects alternative billing instead of Google Play billing
+  Future<UserChoiceBillingDetails> userChoiceBillingAndroid();
 }
 
 // MARK: - Root Operation Helpers
@@ -2790,6 +2873,7 @@ typedef MutationInitConnectionHandler = Future<bool> Function({
 });
 typedef MutationPresentCodeRedemptionSheetIOSHandler = Future<bool> Function();
 typedef MutationPresentExternalPurchaseLinkIOSHandler = Future<ExternalPurchaseLinkResultIOS> Function(String url);
+typedef MutationPresentExternalPurchaseNoticeSheetIOSHandler = Future<ExternalPurchaseNoticeResultIOS> Function();
 typedef MutationRequestPurchaseHandler = Future<RequestPurchaseResult?> Function(RequestPurchaseProps params);
 typedef MutationRequestPurchaseOnPromotedProductIOSHandler = Future<bool> Function();
 typedef MutationRestorePurchasesHandler = Future<void> Function();
@@ -2815,6 +2899,7 @@ class MutationHandlers {
     this.initConnection,
     this.presentCodeRedemptionSheetIOS,
     this.presentExternalPurchaseLinkIOS,
+    this.presentExternalPurchaseNoticeSheetIOS,
     this.requestPurchase,
     this.requestPurchaseOnPromotedProductIOS,
     this.restorePurchases,
@@ -2836,6 +2921,7 @@ class MutationHandlers {
   final MutationInitConnectionHandler? initConnection;
   final MutationPresentCodeRedemptionSheetIOSHandler? presentCodeRedemptionSheetIOS;
   final MutationPresentExternalPurchaseLinkIOSHandler? presentExternalPurchaseLinkIOS;
+  final MutationPresentExternalPurchaseNoticeSheetIOSHandler? presentExternalPurchaseNoticeSheetIOS;
   final MutationRequestPurchaseHandler? requestPurchase;
   final MutationRequestPurchaseOnPromotedProductIOSHandler? requestPurchaseOnPromotedProductIOS;
   final MutationRestorePurchasesHandler? restorePurchases;
@@ -2847,6 +2933,7 @@ class MutationHandlers {
 
 // MARK: - Query Helpers
 
+typedef QueryCanPresentExternalPurchaseNoticeIOSHandler = Future<bool> Function();
 typedef QueryCurrentEntitlementIOSHandler = Future<PurchaseIOS?> Function(String sku);
 typedef QueryFetchProductsHandler = Future<FetchProductsResult> Function({
   required List<String> skus,
@@ -2876,6 +2963,7 @@ typedef QueryValidateReceiptIOSHandler = Future<ReceiptValidationResultIOS> Func
 
 class QueryHandlers {
   const QueryHandlers({
+    this.canPresentExternalPurchaseNoticeIOS,
     this.currentEntitlementIOS,
     this.fetchProducts,
     this.getActiveSubscriptions,
@@ -2895,6 +2983,7 @@ class QueryHandlers {
     this.validateReceiptIOS,
   });
 
+  final QueryCanPresentExternalPurchaseNoticeIOSHandler? canPresentExternalPurchaseNoticeIOS;
   final QueryCurrentEntitlementIOSHandler? currentEntitlementIOS;
   final QueryFetchProductsHandler? fetchProducts;
   final QueryGetActiveSubscriptionsHandler? getActiveSubscriptions;
@@ -2919,15 +3008,18 @@ class QueryHandlers {
 typedef SubscriptionPromotedProductIOSHandler = Future<String> Function();
 typedef SubscriptionPurchaseErrorHandler = Future<PurchaseError> Function();
 typedef SubscriptionPurchaseUpdatedHandler = Future<Purchase> Function();
+typedef SubscriptionUserChoiceBillingAndroidHandler = Future<UserChoiceBillingDetails> Function();
 
 class SubscriptionHandlers {
   const SubscriptionHandlers({
     this.promotedProductIOS,
     this.purchaseError,
     this.purchaseUpdated,
+    this.userChoiceBillingAndroid,
   });
 
   final SubscriptionPromotedProductIOSHandler? promotedProductIOS;
   final SubscriptionPurchaseErrorHandler? purchaseError;
   final SubscriptionPurchaseUpdatedHandler? purchaseUpdated;
+  final SubscriptionUserChoiceBillingAndroidHandler? userChoiceBillingAndroid;
 }

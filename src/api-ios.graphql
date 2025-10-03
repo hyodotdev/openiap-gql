@@ -12,6 +12,11 @@ extend type Query {
   # Future
   getPromotedProductIOS: ProductIOS
   """
+  Check if external purchase notice sheet can be presented (iOS 18.2+)
+  """
+  # Future
+  canPresentExternalPurchaseNoticeIOS: Boolean!
+  """
   Retrieve all pending transactions in the StoreKit queue
   """
   # Future
@@ -94,6 +99,11 @@ extend type Mutation {
   """
   # Future
   presentCodeRedemptionSheetIOS: Boolean!
+  """
+  Present external purchase notice sheet (iOS 18.2+)
+  """
+  # Future
+  presentExternalPurchaseNoticeSheetIOS: ExternalPurchaseNoticeResultIOS!
   """
   Present external purchase custom link with StoreKit UI (iOS 18.2+)
   """

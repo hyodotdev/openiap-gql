@@ -57,6 +57,14 @@ public enum ErrorCode: String, Codable, CaseIterable {
     case emptySkuList = "empty-sku-list"
 }
 
+/// User actions on external purchase notice sheet (iOS 18.2+)
+public enum ExternalPurchaseNoticeAction: String, Codable, CaseIterable {
+    /// User chose to continue to external purchase
+    case `continue` = "continue"
+    /// User dismissed the notice sheet
+    case dismissed = "dismissed"
+}
+
 public enum IapEvent: String, Codable, CaseIterable {
     case purchaseUpdated = "purchase-updated"
     case purchaseError = "purchase-error"
@@ -223,6 +231,14 @@ public struct ExternalPurchaseLinkResultIOS: Codable {
     public var error: String?
     /// Whether the user completed the external purchase flow
     public var success: Bool
+}
+
+/// Result of presenting external purchase notice sheet (iOS 18.2+)
+public struct ExternalPurchaseNoticeResultIOS: Codable {
+    /// Optional error message if the presentation failed
+    public var error: String?
+    /// Notice result indicating user action
+    public var result: ExternalPurchaseNoticeAction
 }
 
 public enum FetchProductsResult {
@@ -477,6 +493,15 @@ public struct SubscriptionStatusIOS: Codable {
     public var state: String
 }
 
+/// User Choice Billing event details (Android)
+/// Fired when a user selects alternative billing in the User Choice Billing dialog
+public struct UserChoiceBillingDetails: Codable {
+    /// Token that must be reported to Google Play within 24 hours
+    public var externalTransactionToken: String
+    /// List of product IDs selected by the user
+    public var products: [String]
+}
+
 public typealias VoidResult = Void
 
 // MARK: - Input Objects
@@ -643,8 +668,6 @@ public struct RequestPurchaseIosProps: Codable {
     public var andDangerouslyFinishTransactionAutomatically: Bool?
     /// App account token for user tracking
     public var appAccountToken: String?
-    /// External purchase URL for alternative billing (iOS)
-    public var externalPurchaseUrl: String?
     /// Purchase quantity
     public var quantity: Int?
     /// Product SKU
@@ -655,14 +678,12 @@ public struct RequestPurchaseIosProps: Codable {
     public init(
         andDangerouslyFinishTransactionAutomatically: Bool? = nil,
         appAccountToken: String? = nil,
-        externalPurchaseUrl: String? = nil,
         quantity: Int? = nil,
         sku: String,
         withOffer: DiscountOfferInputIOS? = nil
     ) {
         self.andDangerouslyFinishTransactionAutomatically = andDangerouslyFinishTransactionAutomatically
         self.appAccountToken = appAccountToken
-        self.externalPurchaseUrl = externalPurchaseUrl
         self.quantity = quantity
         self.sku = sku
         self.withOffer = withOffer
@@ -792,8 +813,6 @@ public struct RequestSubscriptionAndroidProps: Codable {
 public struct RequestSubscriptionIosProps: Codable {
     public var andDangerouslyFinishTransactionAutomatically: Bool?
     public var appAccountToken: String?
-    /// External purchase URL for alternative billing (iOS)
-    public var externalPurchaseUrl: String?
     public var quantity: Int?
     public var sku: String
     public var withOffer: DiscountOfferInputIOS?
@@ -801,14 +820,12 @@ public struct RequestSubscriptionIosProps: Codable {
     public init(
         andDangerouslyFinishTransactionAutomatically: Bool? = nil,
         appAccountToken: String? = nil,
-        externalPurchaseUrl: String? = nil,
         quantity: Int? = nil,
         sku: String,
         withOffer: DiscountOfferInputIOS? = nil
     ) {
         self.andDangerouslyFinishTransactionAutomatically = andDangerouslyFinishTransactionAutomatically
         self.appAccountToken = appAccountToken
-        self.externalPurchaseUrl = externalPurchaseUrl
         self.quantity = quantity
         self.sku = sku
         self.withOffer = withOffer
@@ -1165,6 +1182,8 @@ public protocol MutationResolver {
     func presentCodeRedemptionSheetIOS() async throws -> Bool
     /// Present external purchase custom link with StoreKit UI (iOS 18.2+)
     func presentExternalPurchaseLinkIOS(_ url: String) async throws -> ExternalPurchaseLinkResultIOS
+    /// Present external purchase notice sheet (iOS 18.2+)
+    func presentExternalPurchaseNoticeSheetIOS() async throws -> ExternalPurchaseNoticeResultIOS
     /// Initiate a purchase flow; rely on events for final state
     func requestPurchase(_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
     /// Purchase the promoted product surfaced by the App Store
@@ -1188,6 +1207,8 @@ public protocol MutationResolver {
 
 /// GraphQL root query operations.
 public protocol QueryResolver {
+    /// Check if external purchase notice sheet can be presented (iOS 18.2+)
+    func canPresentExternalPurchaseNoticeIOS() async throws -> Bool
     /// Get current StoreKit 2 entitlements (iOS 15+)
     func currentEntitlementIOS(_ sku: String) async throws -> PurchaseIOS?
     /// Retrieve products or subscriptions from the store
@@ -1232,6 +1253,9 @@ public protocol SubscriptionResolver {
     func purchaseError() async throws -> PurchaseError
     /// Fires when a purchase completes successfully or a pending purchase resolves
     func purchaseUpdated() async throws -> Purchase
+    /// Fires when a user selects alternative billing in the User Choice Billing dialog (Android only)
+    /// Only triggered when the user selects alternative billing instead of Google Play billing
+    func userChoiceBillingAndroid() async throws -> UserChoiceBillingDetails
 }
 
 // MARK: - Root Operation Helpers
@@ -1250,6 +1274,7 @@ public typealias MutationFinishTransactionHandler = (_ purchase: PurchaseInput, 
 public typealias MutationInitConnectionHandler = (_ config: InitConnectionConfig?) async throws -> Bool
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = () async throws -> Bool
 public typealias MutationPresentExternalPurchaseLinkIOSHandler = (_ url: String) async throws -> ExternalPurchaseLinkResultIOS
+public typealias MutationPresentExternalPurchaseNoticeSheetIOSHandler = () async throws -> ExternalPurchaseNoticeResultIOS
 public typealias MutationRequestPurchaseHandler = (_ params: RequestPurchaseProps) async throws -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = () async throws -> Bool
 public typealias MutationRestorePurchasesHandler = () async throws -> Void
@@ -1271,6 +1296,7 @@ public struct MutationHandlers {
     public var initConnection: MutationInitConnectionHandler?
     public var presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler?
     public var presentExternalPurchaseLinkIOS: MutationPresentExternalPurchaseLinkIOSHandler?
+    public var presentExternalPurchaseNoticeSheetIOS: MutationPresentExternalPurchaseNoticeSheetIOSHandler?
     public var requestPurchase: MutationRequestPurchaseHandler?
     public var requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler?
     public var restorePurchases: MutationRestorePurchasesHandler?
@@ -1292,6 +1318,7 @@ public struct MutationHandlers {
         initConnection: MutationInitConnectionHandler? = nil,
         presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler? = nil,
         presentExternalPurchaseLinkIOS: MutationPresentExternalPurchaseLinkIOSHandler? = nil,
+        presentExternalPurchaseNoticeSheetIOS: MutationPresentExternalPurchaseNoticeSheetIOSHandler? = nil,
         requestPurchase: MutationRequestPurchaseHandler? = nil,
         requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = nil,
         restorePurchases: MutationRestorePurchasesHandler? = nil,
@@ -1312,6 +1339,7 @@ public struct MutationHandlers {
         self.initConnection = initConnection
         self.presentCodeRedemptionSheetIOS = presentCodeRedemptionSheetIOS
         self.presentExternalPurchaseLinkIOS = presentExternalPurchaseLinkIOS
+        self.presentExternalPurchaseNoticeSheetIOS = presentExternalPurchaseNoticeSheetIOS
         self.requestPurchase = requestPurchase
         self.requestPurchaseOnPromotedProductIOS = requestPurchaseOnPromotedProductIOS
         self.restorePurchases = restorePurchases
@@ -1324,6 +1352,7 @@ public struct MutationHandlers {
 
 // MARK: - Query Helpers
 
+public typealias QueryCanPresentExternalPurchaseNoticeIOSHandler = () async throws -> Bool
 public typealias QueryCurrentEntitlementIOSHandler = (_ sku: String) async throws -> PurchaseIOS?
 public typealias QueryFetchProductsHandler = (_ params: ProductRequest) async throws -> FetchProductsResult
 public typealias QueryGetActiveSubscriptionsHandler = (_ subscriptionIds: [String]?) async throws -> [ActiveSubscription]
@@ -1343,6 +1372,7 @@ public typealias QuerySubscriptionStatusIOSHandler = (_ sku: String) async throw
 public typealias QueryValidateReceiptIOSHandler = (_ options: ReceiptValidationProps) async throws -> ReceiptValidationResultIOS
 
 public struct QueryHandlers {
+    public var canPresentExternalPurchaseNoticeIOS: QueryCanPresentExternalPurchaseNoticeIOSHandler?
     public var currentEntitlementIOS: QueryCurrentEntitlementIOSHandler?
     public var fetchProducts: QueryFetchProductsHandler?
     public var getActiveSubscriptions: QueryGetActiveSubscriptionsHandler?
@@ -1362,6 +1392,7 @@ public struct QueryHandlers {
     public var validateReceiptIOS: QueryValidateReceiptIOSHandler?
 
     public init(
+        canPresentExternalPurchaseNoticeIOS: QueryCanPresentExternalPurchaseNoticeIOSHandler? = nil,
         currentEntitlementIOS: QueryCurrentEntitlementIOSHandler? = nil,
         fetchProducts: QueryFetchProductsHandler? = nil,
         getActiveSubscriptions: QueryGetActiveSubscriptionsHandler? = nil,
@@ -1380,6 +1411,7 @@ public struct QueryHandlers {
         subscriptionStatusIOS: QuerySubscriptionStatusIOSHandler? = nil,
         validateReceiptIOS: QueryValidateReceiptIOSHandler? = nil
     ) {
+        self.canPresentExternalPurchaseNoticeIOS = canPresentExternalPurchaseNoticeIOS
         self.currentEntitlementIOS = currentEntitlementIOS
         self.fetchProducts = fetchProducts
         self.getActiveSubscriptions = getActiveSubscriptions
@@ -1405,19 +1437,23 @@ public struct QueryHandlers {
 public typealias SubscriptionPromotedProductIOSHandler = () async throws -> String
 public typealias SubscriptionPurchaseErrorHandler = () async throws -> PurchaseError
 public typealias SubscriptionPurchaseUpdatedHandler = () async throws -> Purchase
+public typealias SubscriptionUserChoiceBillingAndroidHandler = () async throws -> UserChoiceBillingDetails
 
 public struct SubscriptionHandlers {
     public var promotedProductIOS: SubscriptionPromotedProductIOSHandler?
     public var purchaseError: SubscriptionPurchaseErrorHandler?
     public var purchaseUpdated: SubscriptionPurchaseUpdatedHandler?
+    public var userChoiceBillingAndroid: SubscriptionUserChoiceBillingAndroidHandler?
 
     public init(
         promotedProductIOS: SubscriptionPromotedProductIOSHandler? = nil,
         purchaseError: SubscriptionPurchaseErrorHandler? = nil,
-        purchaseUpdated: SubscriptionPurchaseUpdatedHandler? = nil
+        purchaseUpdated: SubscriptionPurchaseUpdatedHandler? = nil,
+        userChoiceBillingAndroid: SubscriptionUserChoiceBillingAndroidHandler? = nil
     ) {
         self.promotedProductIOS = promotedProductIOS
         self.purchaseError = purchaseError
         self.purchaseUpdated = purchaseUpdated
+        self.userChoiceBillingAndroid = userChoiceBillingAndroid
     }
 }
