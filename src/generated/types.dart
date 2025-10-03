@@ -256,7 +256,8 @@ enum ExternalPurchaseNoticeAction {
 enum IapEvent {
   PurchaseUpdated('purchase-updated'),
   PurchaseError('purchase-error'),
-  PromotedProductIOS('promoted-product-ios');
+  PromotedProductIOS('promoted-product-ios'),
+  UserChoiceBillingAndroid('user-choice-billing-android');
 
   const IapEvent(this.value);
   final String value;
@@ -275,6 +276,10 @@ enum IapEvent {
       case 'PROMOTED_PRODUCT_IOS':
       case 'PromotedProductIOS':
         return IapEvent.PromotedProductIOS;
+      case 'user-choice-billing-android':
+      case 'USER_CHOICE_BILLING_ANDROID':
+      case 'UserChoiceBillingAndroid':
+        return IapEvent.UserChoiceBillingAndroid;
     }
     throw ArgumentError('Unknown IapEvent value: $value');
   }

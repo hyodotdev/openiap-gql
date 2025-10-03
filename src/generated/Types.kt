@@ -220,7 +220,8 @@ public enum class ExternalPurchaseNoticeAction(val rawValue: String) {
 public enum class IapEvent(val rawValue: String) {
     PurchaseUpdated("purchase-updated"),
     PurchaseError("purchase-error"),
-    PromotedProductIos("promoted-product-ios")
+    PromotedProductIos("promoted-product-ios"),
+    UserChoiceBillingAndroid("user-choice-billing-android")
 
     companion object {
         fun fromJson(value: String): IapEvent = when (value) {
@@ -233,6 +234,9 @@ public enum class IapEvent(val rawValue: String) {
             "promoted-product-ios" -> IapEvent.PromotedProductIos
             "PROMOTED_PRODUCT_IOS" -> IapEvent.PromotedProductIos
             "PromotedProductIOS" -> IapEvent.PromotedProductIos
+            "user-choice-billing-android" -> IapEvent.UserChoiceBillingAndroid
+            "USER_CHOICE_BILLING_ANDROID" -> IapEvent.UserChoiceBillingAndroid
+            "UserChoiceBillingAndroid" -> IapEvent.UserChoiceBillingAndroid
             else -> throw IllegalArgumentException("Unknown IapEvent value: $value")
         }
     }

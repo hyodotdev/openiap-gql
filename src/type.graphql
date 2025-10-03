@@ -27,6 +27,7 @@ enum IapEvent {
   PurchaseUpdated
   PurchaseError
   PromotedProductIOS
+  UserChoiceBillingAndroid
 }
 
 # Common product fields

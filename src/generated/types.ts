@@ -163,7 +163,7 @@ export interface ExternalPurchaseNoticeResultIOS {
 
 export type FetchProductsResult = Product[] | ProductSubscription[] | null;
 
-export type IapEvent = 'purchase-updated' | 'purchase-error' | 'promoted-product-ios';
+export type IapEvent = 'purchase-updated' | 'purchase-error' | 'promoted-product-ios' | 'user-choice-billing-android';
 
 export type IapPlatform = 'ios' | 'android';
 
