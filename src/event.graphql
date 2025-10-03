@@ -13,4 +13,9 @@ extend type Subscription {
   Fires when the App Store surfaces a promoted product (iOS only)
   """
   promotedProductIOS: String!
+  """
+  Fires when a user selects alternative billing in the User Choice Billing dialog (Android only)
+  Only triggered when the user selects alternative billing instead of Google Play billing
+  """
+  userChoiceBillingAndroid: UserChoiceBillingDetails!
 }

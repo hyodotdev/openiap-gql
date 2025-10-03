@@ -205,3 +205,19 @@ enum AlternativeBillingModeAndroid {
   ALTERNATIVE_ONLY
 }
 
+# User Choice Billing
+"""
+User Choice Billing event details (Android)
+Fired when a user selects alternative billing in the User Choice Billing dialog
+"""
+type UserChoiceBillingDetails {
+  """
+  Token that must be reported to Google Play within 24 hours
+  """
+  externalTransactionToken: String!
+  """
+  List of product IDs selected by the user
+  """
+  products: [String!]!
+}
+

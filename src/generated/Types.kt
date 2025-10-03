@@ -189,6 +189,34 @@ public enum class ErrorCode(val rawValue: String) {
     fun toJson(): String = rawValue
 }
 
+/**
+ * User actions on external purchase notice sheet (iOS 18.2+)
+ */
+public enum class ExternalPurchaseNoticeAction(val rawValue: String) {
+    /**
+     * User chose to continue to external purchase
+     */
+    Continue("continue"),
+    /**
+     * User dismissed the notice sheet
+     */
+    Dismissed("dismissed")
+
+    companion object {
+        fun fromJson(value: String): ExternalPurchaseNoticeAction = when (value) {
+            "continue" -> ExternalPurchaseNoticeAction.Continue
+            "CONTINUE" -> ExternalPurchaseNoticeAction.Continue
+            "Continue" -> ExternalPurchaseNoticeAction.Continue
+            "dismissed" -> ExternalPurchaseNoticeAction.Dismissed
+            "DISMISSED" -> ExternalPurchaseNoticeAction.Dismissed
+            "Dismissed" -> ExternalPurchaseNoticeAction.Dismissed
+            else -> throw IllegalArgumentException("Unknown ExternalPurchaseNoticeAction value: $value")
+        }
+    }
+
+    fun toJson(): String = rawValue
+}
+
 public enum class IapEvent(val rawValue: String) {
     PurchaseUpdated("purchase-updated"),
     PurchaseError("purchase-error"),
@@ -672,6 +700,66 @@ public data class EntitlementIOS(
         "jsonRepresentation" to jsonRepresentation,
         "sku" to sku,
         "transactionId" to transactionId,
+    )
+}
+
+/**
+ * Result of presenting an external purchase link (iOS 18.2+)
+ */
+public data class ExternalPurchaseLinkResultIOS(
+    /**
+     * Optional error message if the presentation failed
+     */
+    val error: String? = null,
+    /**
+     * Whether the user completed the external purchase flow
+     */
+    val success: Boolean
+) {
+
+    companion object {
+        fun fromJson(json: Map<String, Any?>): ExternalPurchaseLinkResultIOS {
+            return ExternalPurchaseLinkResultIOS(
+                error = json["error"] as String?,
+                success = json["success"] as Boolean,
+            )
+        }
+    }
+
+    fun toJson(): Map<String, Any?> = mapOf(
+        "__typename" to "ExternalPurchaseLinkResultIOS",
+        "error" to error,
+        "success" to success,
+    )
+}
+
+/**
+ * Result of presenting external purchase notice sheet (iOS 18.2+)
+ */
+public data class ExternalPurchaseNoticeResultIOS(
+    /**
+     * Optional error message if the presentation failed
+     */
+    val error: String? = null,
+    /**
+     * Notice result indicating user action
+     */
+    val result: ExternalPurchaseNoticeAction
+) {
+
+    companion object {
+        fun fromJson(json: Map<String, Any?>): ExternalPurchaseNoticeResultIOS {
+            return ExternalPurchaseNoticeResultIOS(
+                error = json["error"] as String?,
+                result = ExternalPurchaseNoticeAction.fromJson(json["result"] as String),
+            )
+        }
+    }
+
+    fun toJson(): Map<String, Any?> = mapOf(
+        "__typename" to "ExternalPurchaseNoticeResultIOS",
+        "error" to error,
+        "result" to result.toJson(),
     )
 }
 
@@ -1533,6 +1621,37 @@ public data class SubscriptionStatusIOS(
     )
 }
 
+/**
+ * User Choice Billing event details (Android)
+ * Fired when a user selects alternative billing in the User Choice Billing dialog
+ */
+public data class UserChoiceBillingDetails(
+    /**
+     * Token that must be reported to Google Play within 24 hours
+     */
+    val externalTransactionToken: String,
+    /**
+     * List of product IDs selected by the user
+     */
+    val products: List<String>
+) {
+
+    companion object {
+        fun fromJson(json: Map<String, Any?>): UserChoiceBillingDetails {
+            return UserChoiceBillingDetails(
+                externalTransactionToken = json["externalTransactionToken"] as String,
+                products = (json["products"] as List<*>).map { it as String },
+            )
+        }
+    }
+
+    fun toJson(): Map<String, Any?> = mapOf(
+        "__typename" to "UserChoiceBillingDetails",
+        "externalTransactionToken" to externalTransactionToken,
+        "products" to products.map { it },
+    )
+}
+
 public typealias VoidResult = Unit
 
 // MARK: - Input Objects
@@ -1796,10 +1915,6 @@ public data class RequestPurchaseIosProps(
      */
     val appAccountToken: String? = null,
     /**
-     * External purchase URL for alternative billing (iOS)
-     */
-    val externalPurchaseUrl: String? = null,
-    /**
      * Purchase quantity
      */
     val quantity: Int? = null,
@@ -1817,7 +1932,6 @@ public data class RequestPurchaseIosProps(
             return RequestPurchaseIosProps(
                 andDangerouslyFinishTransactionAutomatically = json["andDangerouslyFinishTransactionAutomatically"] as Boolean?,
                 appAccountToken = json["appAccountToken"] as String?,
-                externalPurchaseUrl = json["externalPurchaseUrl"] as String?,
                 quantity = (json["quantity"] as Number?)?.toInt(),
                 sku = json["sku"] as String,
                 withOffer = (json["withOffer"] as Map<String, Any?>?)?.let { DiscountOfferInputIOS.fromJson(it) },
@@ -1828,7 +1942,6 @@ public data class RequestPurchaseIosProps(
     fun toJson(): Map<String, Any?> = mapOf(
         "andDangerouslyFinishTransactionAutomatically" to andDangerouslyFinishTransactionAutomatically,
         "appAccountToken" to appAccountToken,
-        "externalPurchaseUrl" to externalPurchaseUrl,
         "quantity" to quantity,
         "sku" to sku,
         "withOffer" to withOffer?.toJson(),
@@ -1971,10 +2084,6 @@ public data class RequestSubscriptionAndroidProps(
 public data class RequestSubscriptionIosProps(
     val andDangerouslyFinishTransactionAutomatically: Boolean? = null,
     val appAccountToken: String? = null,
-    /**
-     * External purchase URL for alternative billing (iOS)
-     */
-    val externalPurchaseUrl: String? = null,
     val quantity: Int? = null,
     val sku: String,
     val withOffer: DiscountOfferInputIOS? = null
@@ -1984,7 +2093,6 @@ public data class RequestSubscriptionIosProps(
             return RequestSubscriptionIosProps(
                 andDangerouslyFinishTransactionAutomatically = json["andDangerouslyFinishTransactionAutomatically"] as Boolean?,
                 appAccountToken = json["appAccountToken"] as String?,
-                externalPurchaseUrl = json["externalPurchaseUrl"] as String?,
                 quantity = (json["quantity"] as Number?)?.toInt(),
                 sku = json["sku"] as String,
                 withOffer = (json["withOffer"] as Map<String, Any?>?)?.let { DiscountOfferInputIOS.fromJson(it) },
@@ -1995,7 +2103,6 @@ public data class RequestSubscriptionIosProps(
     fun toJson(): Map<String, Any?> = mapOf(
         "andDangerouslyFinishTransactionAutomatically" to andDangerouslyFinishTransactionAutomatically,
         "appAccountToken" to appAccountToken,
-        "externalPurchaseUrl" to externalPurchaseUrl,
         "quantity" to quantity,
         "sku" to sku,
         "withOffer" to withOffer?.toJson(),
@@ -2146,6 +2253,14 @@ public interface MutationResolver {
      */
     suspend fun presentCodeRedemptionSheetIOS(): Boolean
     /**
+     * Present external purchase custom link with StoreKit UI (iOS 18.2+)
+     */
+    suspend fun presentExternalPurchaseLinkIOS(url: String): ExternalPurchaseLinkResultIOS
+    /**
+     * Present external purchase notice sheet (iOS 18.2+)
+     */
+    suspend fun presentExternalPurchaseNoticeSheetIOS(): ExternalPurchaseNoticeResultIOS
+    /**
      * Initiate a purchase flow; rely on events for final state
      */
     suspend fun requestPurchase(params: RequestPurchaseProps): RequestPurchaseResult?
@@ -2184,6 +2299,10 @@ public interface MutationResolver {
  * GraphQL root query operations.
  */
 public interface QueryResolver {
+    /**
+     * Check if external purchase notice sheet can be presented (iOS 18.2+)
+     */
+    suspend fun canPresentExternalPurchaseNoticeIOS(): Boolean
     /**
      * Get current StoreKit 2 entitlements (iOS 15+)
      */
@@ -2270,6 +2389,11 @@ public interface SubscriptionResolver {
      * Fires when a purchase completes successfully or a pending purchase resolves
      */
     suspend fun purchaseUpdated(): Purchase
+    /**
+     * Fires when a user selects alternative billing in the User Choice Billing dialog (Android only)
+     * Only triggered when the user selects alternative billing instead of Google Play billing
+     */
+    suspend fun userChoiceBillingAndroid(): UserChoiceBillingDetails
 }
 
 // MARK: - Root Operation Helpers
@@ -2287,6 +2411,8 @@ public typealias MutationEndConnectionHandler = suspend () -> Boolean
 public typealias MutationFinishTransactionHandler = suspend (purchase: PurchaseInput, isConsumable: Boolean?) -> Unit
 public typealias MutationInitConnectionHandler = suspend (config: InitConnectionConfig?) -> Boolean
 public typealias MutationPresentCodeRedemptionSheetIOSHandler = suspend () -> Boolean
+public typealias MutationPresentExternalPurchaseLinkIOSHandler = suspend (url: String) -> ExternalPurchaseLinkResultIOS
+public typealias MutationPresentExternalPurchaseNoticeSheetIOSHandler = suspend () -> ExternalPurchaseNoticeResultIOS
 public typealias MutationRequestPurchaseHandler = suspend (params: RequestPurchaseProps) -> RequestPurchaseResult?
 public typealias MutationRequestPurchaseOnPromotedProductIOSHandler = suspend () -> Boolean
 public typealias MutationRestorePurchasesHandler = suspend () -> Unit
@@ -2307,6 +2433,8 @@ public data class MutationHandlers(
     val finishTransaction: MutationFinishTransactionHandler? = null,
     val initConnection: MutationInitConnectionHandler? = null,
     val presentCodeRedemptionSheetIOS: MutationPresentCodeRedemptionSheetIOSHandler? = null,
+    val presentExternalPurchaseLinkIOS: MutationPresentExternalPurchaseLinkIOSHandler? = null,
+    val presentExternalPurchaseNoticeSheetIOS: MutationPresentExternalPurchaseNoticeSheetIOSHandler? = null,
     val requestPurchase: MutationRequestPurchaseHandler? = null,
     val requestPurchaseOnPromotedProductIOS: MutationRequestPurchaseOnPromotedProductIOSHandler? = null,
     val restorePurchases: MutationRestorePurchasesHandler? = null,
@@ -2318,6 +2446,7 @@ public data class MutationHandlers(
 
 // MARK: - Query Helpers
 
+public typealias QueryCanPresentExternalPurchaseNoticeIOSHandler = suspend () -> Boolean
 public typealias QueryCurrentEntitlementIOSHandler = suspend (sku: String) -> PurchaseIOS?
 public typealias QueryFetchProductsHandler = suspend (params: ProductRequest) -> FetchProductsResult
 public typealias QueryGetActiveSubscriptionsHandler = suspend (subscriptionIds: List<String>?) -> List<ActiveSubscription>
@@ -2337,6 +2466,7 @@ public typealias QuerySubscriptionStatusIOSHandler = suspend (sku: String) -> Li
 public typealias QueryValidateReceiptIOSHandler = suspend (options: ReceiptValidationProps) -> ReceiptValidationResultIOS
 
 public data class QueryHandlers(
+    val canPresentExternalPurchaseNoticeIOS: QueryCanPresentExternalPurchaseNoticeIOSHandler? = null,
     val currentEntitlementIOS: QueryCurrentEntitlementIOSHandler? = null,
     val fetchProducts: QueryFetchProductsHandler? = null,
     val getActiveSubscriptions: QueryGetActiveSubscriptionsHandler? = null,
@@ -2361,9 +2491,11 @@ public data class QueryHandlers(
 public typealias SubscriptionPromotedProductIOSHandler = suspend () -> String
 public typealias SubscriptionPurchaseErrorHandler = suspend () -> PurchaseError
 public typealias SubscriptionPurchaseUpdatedHandler = suspend () -> Purchase
+public typealias SubscriptionUserChoiceBillingAndroidHandler = suspend () -> UserChoiceBillingDetails
 
 public data class SubscriptionHandlers(
     val promotedProductIOS: SubscriptionPromotedProductIOSHandler? = null,
     val purchaseError: SubscriptionPurchaseErrorHandler? = null,
-    val purchaseUpdated: SubscriptionPurchaseUpdatedHandler? = null
+    val purchaseUpdated: SubscriptionPurchaseUpdatedHandler? = null,
+    val userChoiceBillingAndroid: SubscriptionUserChoiceBillingAndroidHandler? = null
 )

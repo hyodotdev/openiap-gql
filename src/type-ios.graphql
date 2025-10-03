@@ -187,10 +187,6 @@ input RequestPurchaseIosProps {
   Discount offer to apply
   """
   withOffer: DiscountOfferInputIOS
-  """
-  External purchase URL for alternative billing (iOS)
-  """
-  externalPurchaseUrl: String
 }
 
 # iOS uses the same props for subscriptions
@@ -200,10 +196,6 @@ input RequestSubscriptionIosProps {
   appAccountToken: String
   quantity: Int
   withOffer: DiscountOfferInputIOS
-  """
-  External purchase URL for alternative billing (iOS)
-  """
-  externalPurchaseUrl: String
 }
 
 # iOS Discount Offer (input)
@@ -311,4 +303,46 @@ type AppTransaction {
   preorderDate: Float
   appTransactionId: String
   originalPlatform: String
+}
+
+"""
+Result of presenting external purchase notice sheet (iOS 18.2+)
+"""
+type ExternalPurchaseNoticeResultIOS {
+  """
+  Notice result indicating user action
+  """
+  result: ExternalPurchaseNoticeAction!
+  """
+  Optional error message if the presentation failed
+  """
+  error: String
+}
+
+"""
+User actions on external purchase notice sheet (iOS 18.2+)
+"""
+enum ExternalPurchaseNoticeAction {
+  """
+  User chose to continue to external purchase
+  """
+  Continue
+  """
+  User dismissed the notice sheet
+  """
+  Dismissed
+}
+
+"""
+Result of presenting an external purchase link (iOS 18.2+)
+"""
+type ExternalPurchaseLinkResultIOS {
+  """
+  Whether the user completed the external purchase flow
+  """
+  success: Boolean!
+  """
+  Optional error message if the presentation failed
+  """
+  error: String
 }
