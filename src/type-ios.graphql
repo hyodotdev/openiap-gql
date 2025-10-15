@@ -157,6 +157,7 @@ type PurchaseIOS implements PurchaseCommon {
   currencyCodeIOS: String
   currencySymbolIOS: String
   countryCodeIOS: String
+  renewalInfoIOS: RenewalInfoIOS
 }
 
 type PurchaseOfferIOS {
@@ -242,10 +243,61 @@ type ReceiptValidationResultIOS {
 }
 
 # StoreKit Subscription Status (iOS)
+"""
+Subscription renewal information from Product.SubscriptionInfo.RenewalInfo
+https://developer.apple.com/documentation/storekit/product/subscriptioninfo/renewalinfo
+"""
 type RenewalInfoIOS {
   jsonRepresentation: String
   willAutoRenew: Boolean!
   autoRenewPreference: String
+
+  """
+  When subscription expires due to cancellation/billing issue
+  Possible values: "VOLUNTARY", "BILLING_ERROR", "DID_NOT_AGREE_TO_PRICE_INCREASE", "PRODUCT_NOT_AVAILABLE", "UNKNOWN"
+  """
+  expirationReason: String
+
+  """
+  Grace period expiration date (milliseconds since epoch)
+  When set, subscription is in grace period (billing issue but still has access)
+  """
+  gracePeriodExpirationDate: Float
+
+  """
+  True if subscription failed to renew due to billing issue and is retrying
+  Note: Not directly available in RenewalInfo, available in Status
+  """
+  isInBillingRetry: Boolean
+
+  """
+  Product ID that will be used on next renewal (when user upgrades/downgrades)
+  If set and different from current productId, subscription will change on expiration
+  """
+  pendingUpgradeProductId: String
+
+  """
+  User's response to subscription price increase
+  Possible values: "AGREED", "PENDING", null (no price increase)
+  """
+  priceIncreaseStatus: String
+
+  """
+  Expected renewal date (milliseconds since epoch)
+  For active subscriptions, when the next renewal/charge will occur
+  """
+  renewalDate: Float
+
+  """
+  Offer ID applied to next renewal (promotional offer, subscription offer code, etc.)
+  """
+  renewalOfferId: String
+
+  """
+  Type of offer applied to next renewal
+  Possible values: "PROMOTIONAL", "SUBSCRIPTION_OFFER_CODE", "WIN_BACK", etc.
+  """
+  renewalOfferType: String
 }
 
 type SubscriptionStatusIOS {

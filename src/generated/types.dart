@@ -1529,6 +1529,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
     this.quantityIOS,
     this.reasonIOS,
     this.reasonStringRepresentationIOS,
+    this.renewalInfoIOS,
     this.revocationDateIOS,
     this.revocationReasonIOS,
     this.storefrontCountryCodeIOS,
@@ -1564,6 +1565,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
   final int? quantityIOS;
   final String? reasonIOS;
   final String? reasonStringRepresentationIOS;
+  final RenewalInfoIOS? renewalInfoIOS;
   final double? revocationDateIOS;
   final String? revocationReasonIOS;
   final String? storefrontCountryCodeIOS;
@@ -1600,6 +1602,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
       quantityIOS: json['quantityIOS'] as int?,
       reasonIOS: json['reasonIOS'] as String?,
       reasonStringRepresentationIOS: json['reasonStringRepresentationIOS'] as String?,
+      renewalInfoIOS: json['renewalInfoIOS'] != null ? RenewalInfoIOS.fromJson(json['renewalInfoIOS'] as Map<String, dynamic>) : null,
       revocationDateIOS: (json['revocationDateIOS'] as num?)?.toDouble(),
       revocationReasonIOS: json['revocationReasonIOS'] as String?,
       storefrontCountryCodeIOS: json['storefrontCountryCodeIOS'] as String?,
@@ -1640,6 +1643,7 @@ class PurchaseIOS extends Purchase implements PurchaseCommon {
       'quantityIOS': quantityIOS,
       'reasonIOS': reasonIOS,
       'reasonStringRepresentationIOS': reasonStringRepresentationIOS,
+      'renewalInfoIOS': renewalInfoIOS?.toJson(),
       'revocationDateIOS': revocationDateIOS,
       'revocationReasonIOS': revocationReasonIOS,
       'storefrontCountryCodeIOS': storefrontCountryCodeIOS,
@@ -1839,21 +1843,77 @@ class RefundResultIOS {
   }
 }
 
+/// Subscription renewal information from Product.SubscriptionInfo.RenewalInfo
+/// https://developer.apple.com/documentation/storekit/product/subscriptioninfo/renewalinfo
 class RenewalInfoIOS {
   const RenewalInfoIOS({
     this.autoRenewPreference,
+    /// When subscription expires due to cancellation/billing issue
+    /// Possible values: "VOLUNTARY", "BILLING_ERROR", "DID_NOT_AGREE_TO_PRICE_INCREASE", "PRODUCT_NOT_AVAILABLE", "UNKNOWN"
+    this.expirationReason,
+    /// Grace period expiration date (milliseconds since epoch)
+    /// When set, subscription is in grace period (billing issue but still has access)
+    this.gracePeriodExpirationDate,
+    /// True if subscription failed to renew due to billing issue and is retrying
+    /// Note: Not directly available in RenewalInfo, available in Status
+    this.isInBillingRetry,
     this.jsonRepresentation,
+    /// Product ID that will be used on next renewal (when user upgrades/downgrades)
+    /// If set and different from current productId, subscription will change on expiration
+    this.pendingUpgradeProductId,
+    /// User's response to subscription price increase
+    /// Possible values: "AGREED", "PENDING", null (no price increase)
+    this.priceIncreaseStatus,
+    /// Expected renewal date (milliseconds since epoch)
+    /// For active subscriptions, when the next renewal/charge will occur
+    this.renewalDate,
+    /// Offer ID applied to next renewal (promotional offer, subscription offer code, etc.)
+    this.renewalOfferId,
+    /// Type of offer applied to next renewal
+    /// Possible values: "PROMOTIONAL", "SUBSCRIPTION_OFFER_CODE", "WIN_BACK", etc.
+    this.renewalOfferType,
     required this.willAutoRenew,
   });
 
   final String? autoRenewPreference;
+  /// When subscription expires due to cancellation/billing issue
+  /// Possible values: "VOLUNTARY", "BILLING_ERROR", "DID_NOT_AGREE_TO_PRICE_INCREASE", "PRODUCT_NOT_AVAILABLE", "UNKNOWN"
+  final String? expirationReason;
+  /// Grace period expiration date (milliseconds since epoch)
+  /// When set, subscription is in grace period (billing issue but still has access)
+  final double? gracePeriodExpirationDate;
+  /// True if subscription failed to renew due to billing issue and is retrying
+  /// Note: Not directly available in RenewalInfo, available in Status
+  final bool? isInBillingRetry;
   final String? jsonRepresentation;
+  /// Product ID that will be used on next renewal (when user upgrades/downgrades)
+  /// If set and different from current productId, subscription will change on expiration
+  final String? pendingUpgradeProductId;
+  /// User's response to subscription price increase
+  /// Possible values: "AGREED", "PENDING", null (no price increase)
+  final String? priceIncreaseStatus;
+  /// Expected renewal date (milliseconds since epoch)
+  /// For active subscriptions, when the next renewal/charge will occur
+  final double? renewalDate;
+  /// Offer ID applied to next renewal (promotional offer, subscription offer code, etc.)
+  final String? renewalOfferId;
+  /// Type of offer applied to next renewal
+  /// Possible values: "PROMOTIONAL", "SUBSCRIPTION_OFFER_CODE", "WIN_BACK", etc.
+  final String? renewalOfferType;
   final bool willAutoRenew;
 
   factory RenewalInfoIOS.fromJson(Map<String, dynamic> json) {
     return RenewalInfoIOS(
       autoRenewPreference: json['autoRenewPreference'] as String?,
+      expirationReason: json['expirationReason'] as String?,
+      gracePeriodExpirationDate: (json['gracePeriodExpirationDate'] as num?)?.toDouble(),
+      isInBillingRetry: json['isInBillingRetry'] as bool?,
       jsonRepresentation: json['jsonRepresentation'] as String?,
+      pendingUpgradeProductId: json['pendingUpgradeProductId'] as String?,
+      priceIncreaseStatus: json['priceIncreaseStatus'] as String?,
+      renewalDate: (json['renewalDate'] as num?)?.toDouble(),
+      renewalOfferId: json['renewalOfferId'] as String?,
+      renewalOfferType: json['renewalOfferType'] as String?,
       willAutoRenew: json['willAutoRenew'] as bool,
     );
   }
@@ -1862,7 +1922,15 @@ class RenewalInfoIOS {
     return {
       '__typename': 'RenewalInfoIOS',
       'autoRenewPreference': autoRenewPreference,
+      'expirationReason': expirationReason,
+      'gracePeriodExpirationDate': gracePeriodExpirationDate,
+      'isInBillingRetry': isInBillingRetry,
       'jsonRepresentation': jsonRepresentation,
+      'pendingUpgradeProductId': pendingUpgradeProductId,
+      'priceIncreaseStatus': priceIncreaseStatus,
+      'renewalDate': renewalDate,
+      'renewalOfferId': renewalOfferId,
+      'renewalOfferType': renewalOfferType,
       'willAutoRenew': willAutoRenew,
     };
   }
