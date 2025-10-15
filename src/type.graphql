@@ -223,6 +223,11 @@ type ActiveSubscription {
   This provides a unified way to identify which specific plan/tier the user is subscribed to.
   """
   currentPlanId: String
+  """
+  Renewal information from StoreKit 2 (iOS only). Contains details about subscription renewal status,
+  pending upgrades/downgrades, and auto-renewal preferences.
+  """
+  renewalInfoIOS: RenewalInfoIOS
 }
 
 # Initialization configuration

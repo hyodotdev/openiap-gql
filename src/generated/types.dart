@@ -590,6 +590,9 @@ class ActiveSubscription {
     this.purchaseToken,
     /// Required for subscription upgrade/downgrade on Android
     this.purchaseTokenAndroid,
+    /// Renewal information from StoreKit 2 (iOS only). Contains details about subscription renewal status,
+    /// pending upgrades/downgrades, and auto-renewal preferences.
+    this.renewalInfoIOS,
     required this.transactionDate,
     required this.transactionId,
     this.willExpireSoon,
@@ -610,6 +613,9 @@ class ActiveSubscription {
   final String? purchaseToken;
   /// Required for subscription upgrade/downgrade on Android
   final String? purchaseTokenAndroid;
+  /// Renewal information from StoreKit 2 (iOS only). Contains details about subscription renewal status,
+  /// pending upgrades/downgrades, and auto-renewal preferences.
+  final RenewalInfoIOS? renewalInfoIOS;
   final double transactionDate;
   final String transactionId;
   final bool? willExpireSoon;
@@ -626,6 +632,7 @@ class ActiveSubscription {
       productId: json['productId'] as String,
       purchaseToken: json['purchaseToken'] as String?,
       purchaseTokenAndroid: json['purchaseTokenAndroid'] as String?,
+      renewalInfoIOS: json['renewalInfoIOS'] != null ? RenewalInfoIOS.fromJson(json['renewalInfoIOS'] as Map<String, dynamic>) : null,
       transactionDate: (json['transactionDate'] as num).toDouble(),
       transactionId: json['transactionId'] as String,
       willExpireSoon: json['willExpireSoon'] as bool?,
@@ -645,6 +652,7 @@ class ActiveSubscription {
       'productId': productId,
       'purchaseToken': purchaseToken,
       'purchaseTokenAndroid': purchaseTokenAndroid,
+      'renewalInfoIOS': renewalInfoIOS?.toJson(),
       'transactionDate': transactionDate,
       'transactionId': transactionId,
       'willExpireSoon': willExpireSoon,

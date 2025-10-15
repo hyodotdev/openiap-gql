@@ -502,6 +502,11 @@ public data class ActiveSubscription(
      * Required for subscription upgrade/downgrade on Android
      */
     val purchaseTokenAndroid: String? = null,
+    /**
+     * Renewal information from StoreKit 2 (iOS only). Contains details about subscription renewal status,
+     * pending upgrades/downgrades, and auto-renewal preferences.
+     */
+    val renewalInfoIOS: RenewalInfoIOS? = null,
     val transactionDate: Double,
     val transactionId: String,
     val willExpireSoon: Boolean? = null
@@ -520,6 +525,7 @@ public data class ActiveSubscription(
                 productId = json["productId"] as String,
                 purchaseToken = json["purchaseToken"] as String?,
                 purchaseTokenAndroid = json["purchaseTokenAndroid"] as String?,
+                renewalInfoIOS = (json["renewalInfoIOS"] as Map<String, Any?>?)?.let { RenewalInfoIOS.fromJson(it) },
                 transactionDate = (json["transactionDate"] as Number).toDouble(),
                 transactionId = json["transactionId"] as String,
                 willExpireSoon = json["willExpireSoon"] as Boolean?,
@@ -539,6 +545,7 @@ public data class ActiveSubscription(
         "productId" to productId,
         "purchaseToken" to purchaseToken,
         "purchaseTokenAndroid" to purchaseTokenAndroid,
+        "renewalInfoIOS" to renewalInfoIOS?.toJson(),
         "transactionDate" to transactionDate,
         "transactionId" to transactionId,
         "willExpireSoon" to willExpireSoon,
