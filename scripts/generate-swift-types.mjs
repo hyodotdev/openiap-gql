@@ -366,6 +366,62 @@ const printInput = (inputType) => {
     lines.push('');
     return;
   }
+  // Custom Decodable for DiscountOfferInputIOS to handle String -> Double conversion
+  if (inputType.name === 'DiscountOfferInputIOS') {
+    addDocComment(lines, inputType.description);
+    lines.push('public struct DiscountOfferInputIOS: Codable {');
+    lines.push('    public var identifier: String');
+    lines.push('    public var keyIdentifier: String');
+    lines.push('    public var nonce: String');
+    lines.push('    public var signature: String');
+    lines.push('    public var timestamp: Double');
+    lines.push('');
+    lines.push('    public init(identifier: String, keyIdentifier: String, nonce: String, signature: String, timestamp: Double) {');
+    lines.push('        self.identifier = identifier');
+    lines.push('        self.keyIdentifier = keyIdentifier');
+    lines.push('        self.nonce = nonce');
+    lines.push('        self.signature = signature');
+    lines.push('        self.timestamp = timestamp');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    private enum CodingKeys: String, CodingKey {');
+    lines.push('        case identifier, keyIdentifier, nonce, signature, timestamp');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    public init(from decoder: Decoder) throws {');
+    lines.push('        let container = try decoder.container(keyedBy: CodingKeys.self)');
+    lines.push('        identifier = try container.decode(String.self, forKey: .identifier)');
+    lines.push('        keyIdentifier = try container.decode(String.self, forKey: .keyIdentifier)');
+    lines.push('        nonce = try container.decode(String.self, forKey: .nonce)');
+    lines.push('        signature = try container.decode(String.self, forKey: .signature)');
+    lines.push('');
+    lines.push('        // Flexible timestamp decoding: accept Double or String');
+    lines.push('        if let timestampDouble = try? container.decode(Double.self, forKey: .timestamp) {');
+    lines.push('            timestamp = timestampDouble');
+    lines.push('        } else if let timestampString = try? container.decode(String.self, forKey: .timestamp),');
+    lines.push('                  let timestampDouble = Double(timestampString) {');
+    lines.push('            timestamp = timestampDouble');
+    lines.push('        } else {');
+    lines.push('            throw DecodingError.dataCorruptedError(');
+    lines.push('                forKey: .timestamp,');
+    lines.push('                in: container,');
+    lines.push('                debugDescription: "timestamp must be a number or numeric string"');
+    lines.push('            )');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    public func encode(to encoder: Encoder) throws {');
+    lines.push('        var container = encoder.container(keyedBy: CodingKeys.self)');
+    lines.push('        try container.encode(identifier, forKey: .identifier)');
+    lines.push('        try container.encode(keyIdentifier, forKey: .keyIdentifier)');
+    lines.push('        try container.encode(nonce, forKey: .nonce)');
+    lines.push('        try container.encode(signature, forKey: .signature)');
+    lines.push('        try container.encode(timestamp, forKey: .timestamp)');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+    return;
+  }
   if (inputType.name === 'RequestPurchaseProps') {
     addDocComment(lines, inputType.description);
     lines.push('public struct RequestPurchaseProps: Codable {');
